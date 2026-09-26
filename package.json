@@ -1,0 +1,16 @@
+{
+  "name": "impactlens-ai",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AI-Powered Impact & Sustainability Media Intelligence Platform",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev --workspace=server",
+    "dev:client": "npm run dev --workspace=client",
+    "install:all": "npm install"
+  },
+  "license": "MIT"
+}
