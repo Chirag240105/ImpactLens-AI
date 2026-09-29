@@ -13,7 +13,9 @@
     "seed": "node utils/seedDemoData.js",
     "seed:reset": "node utils/seedDemoData.js --reset",
     "seed:upload": "node utils/seedDemoData.js --upload",
-    "smoke": "node utils/smoke.js"
+    "smoke": "node utils/smoke.js",
+    "seed:real": "node utils/seedRealData.js",
+    "seed:real:reset": "node utils/seedRealData.js --reset"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -43,5 +45,10 @@
     "nodemon": "^3.1.0",
     "supertest": "^7.0.0"
   },
-  "jest": { "testEnvironment": "node", "testMatch": ["**/tests/**/*.test.js"] }
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ]
+  }
 }

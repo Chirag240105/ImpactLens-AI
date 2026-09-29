@@ -6,6 +6,7 @@ const logger = require('./utils/logger');
 
 async function start() {
   await connect();
+  await require('./services/cloudinary/upload.service').verifyCloudinary();
   await recoverQueue();
   const server = app.listen(config.port, () =>
     logger.info({ port: config.port }, 'ImpactLens API ready'),

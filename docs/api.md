@@ -1,6 +1,17 @@
 # API reference
 
-Base path: `/api`. Success responses use `{ success:true, data, meta }`; errors use `{ success:false, error:{code,message,details} }`. Protected routes use `Authorization: Bearer <JWT>`. List endpoints accept `page` (default 1) and `limit` (default 20, maximum 100). Multipart upload uses fields `projectId`, optional `evidenceType`, and one or more files named `files`.
+Base path: `/api`. Success responses use `{ success:true, data, meta }`; errors use `{ success:false, error:{code,message,details} }`. Protected routes accept `Authorization: Bearer <JWT>` or the httpOnly `token` cookie set by login/register; cookie-authenticated writes must also send `X-Requested-With: XMLHttpRequest` (otherwise `403 CSRF_REJECTED`). List endpoints accept `page` (default 1) and `limit` (default 20, maximum 100). Multipart upload uses fields `projectId`, optional `evidenceType`, `captureDate`, `location` (JSON `{lat,lng,name}`), and one or more files named `files`.
+
+Frontend-facing response details:
+
+- Media lists (`/media`, `/search`) omit `secureUrl` and include `thumbnailUrl` and `previewUrl` (Cloudinary transforms for real assets; the source URL in demo mode). `GET /media/:id` includes both plus `secureUrl`.
+- `/media` and `/search` filters: `evidenceType`, `resourceType`, `processingStatus`, `activity`, `object`, `signal`, `location`, `locationSource`, `minConfidence` (0–1), `from`, `to`. User-supplied patterns are regex-escaped.
+- `/search?q=` drops filler words ("show", "evidence of", …), matches the remaining terms across tags, descriptions, summaries, file names, activities, objects, signals and place names over the whole filtered set, ranks by matched terms, then paginates. Items carry `searchScore` (0–1) and `matchedTerms`; `queryUnderstanding.keywords` lists the terms used.
+- `pair-suggestions` and `comparisons` embed `before`/`after` media cards; pairs prefer later captures at the same named location and include a `reason`.
+- Timeline months include a readable `label` ("Jan 2026"), `evidenceTypes` counts and up to four `highlights`.
+- `/dashboard/overview` adds `activeProjectCount`, `analyzedCount`, `pendingCount`, `failedCount`, `reportCount` and `recentActivity`.
+- `POST /projects/:id/insights/generate` skips insights that already exist and adds per-activity insights citing every supporting asset.
+- Reports add `kpis` and `coverage`; `GET /reports/:id/pdf` returns a sectioned PDF as an attachment. Public report DTOs keep dates and IDs as strings.
 
 | Method | Path | Auth | Description |
 |---|---|---|---|

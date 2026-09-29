@@ -16,6 +16,7 @@ function createProvider() {
   for (const method of [
     'compareImages',
     'generateSummary',
+    'generateCampaign',
     'generateReport',
     'generateEmbedding',
     'understandQuery',

@@ -12,6 +12,17 @@ const schema = new mongoose.Schema(
     uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     cloudinaryPublicId: { type: String, unique: true, sparse: true },
     secureUrl: { type: String, required: true },
+    // Where the original lives: cloudinary, local disk fallback, or an external open-licence source.
+    storage: { type: String, enum: ['cloudinary', 'local', 'external'], default: 'cloudinary' },
+    phash: String,
+    attribution: {
+      source: String,
+      title: String,
+      url: String,
+      author: String,
+      license: String,
+      licenseUrl: String,
+    },
     resourceType: { type: String, enum: ['image', 'video'], default: 'image' },
     format: String,
     bytes: Number,
