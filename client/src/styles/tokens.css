@@ -1,0 +1,125 @@
+/* Design tokens — mirrors DESIGN.md §2, §5, §6, §7. Components must reference these, never raw colours. */
+:root {
+  --bg: #f6f7f4;
+  --surface: #ffffff;
+  --surface-alt: #f0f3ee;
+  --surface-hover: #f3f6f1;
+  --surface-sunken: #e9ede7;
+
+  --border: #e3e8e2;
+  --border-hover: #cbd5cc;
+  --border-strong: #b7c3b9;
+
+  --text: #1f2d25;
+  --text-secondary: #4d5c53;
+  --text-tertiary: #5f6b63;
+  --text-inverse: #ffffff;
+
+  --accent: #267953;
+  --accent-hover: #1f6644;
+  --accent-active: #185236;
+  --accent-soft: #e8f3ec;
+  --accent-soft-hover: #dcede2;
+  --focus-ring: #2f8f63;
+
+  --bg-rgb: 246, 247, 244;
+  --text-rgb: 31, 45, 37;
+  --accent-rgb: 38, 121, 83;
+
+  --success: #276b43;
+  --success-soft: #e7f3ea;
+  --warning: #865209;
+  --warning-soft: #fbf1e1;
+  --error: #b3261e;
+  --error-soft: #fbeaea;
+  --info: #285f80;
+  --info-soft: #e8f1f7;
+
+  --observed: #285f80;
+  --observed-soft: #e8f1f7;
+  --inferred: #5c4a96;
+  --inferred-soft: #f1eef9;
+  --claimed: #3b4a41;
+  --claimed-soft: #eef1ee;
+
+  --viz-1: #267953;
+  --viz-2: #5f8fb0;
+  --viz-3: #c08a3e;
+  --viz-4: #8a76b8;
+  --viz-5: #4f9c9a;
+  --viz-6: #b56b5b;
+
+  --scrim: rgba(var(--text-rgb), 0.42);
+  /* Text and glass laid over photographs: identical in both themes. */
+  --on-media: #ffffff;
+  --media-shade: rgba(15, 24, 19, 0.72);
+  --media-glass: rgba(10, 16, 13, 0.4);
+
+  --font-display: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'DM Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Consolas, monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 999px;
+
+  --shadow-xs: 0 1px 2px rgba(var(--text-rgb), 0.06);
+  --shadow-sm: 0 2px 8px -2px rgba(var(--text-rgb), 0.1);
+  --shadow-md: 0 12px 32px -8px rgba(var(--text-rgb), 0.18);
+  --shadow-lg: 0 24px 64px -12px rgba(var(--text-rgb), 0.28);
+
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 260ms;
+
+  --sidebar-w: 248px;
+  --topbar-h: 60px;
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg: #111714;
+  --surface: #18201b;
+  --surface-alt: #1e2721;
+  --surface-hover: #212b25;
+  --surface-sunken: #0d120f;
+  --border: #2a352e;
+  --border-hover: #3a473f;
+  --border-strong: #4a584f;
+  --text: #e8eee9;
+  --text-secondary: #b9c5bc;
+  --text-tertiary: #8e9b92;
+  --text-inverse: #0f1411;
+  --accent: #4fb483;
+  --accent-hover: #63c493;
+  --accent-active: #3f9d70;
+  --accent-soft: #1d3327;
+  --accent-soft-hover: #234031;
+  --focus-ring: #63c493;
+  --bg-rgb: 17, 23, 20;
+  --text-rgb: 232, 238, 233;
+  --accent-rgb: 79, 180, 131;
+  --success: #5cbf85;
+  --success-soft: #1c3326;
+  --warning: #e0a44d;
+  --warning-soft: #3a2c15;
+  --error: #ef7b73;
+  --error-soft: #3b1d1b;
+  --info: #72a9cf;
+  --info-soft: #172a37;
+  --observed: #72a9cf;
+  --observed-soft: #172a37;
+  --inferred: #a898dc;
+  --inferred-soft: #272238;
+  --claimed: #c3cec6;
+  --claimed-soft: #232b26;
+  --scrim: rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 12px 32px -8px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 24px 64px -12px rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
+}
