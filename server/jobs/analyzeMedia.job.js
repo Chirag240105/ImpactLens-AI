@@ -56,6 +56,8 @@ async function analyzeMedia(id) {
     if (data.estimatedPlace && (!asset.location?.source || asset.location.source === 'UNKNOWN'))
       asset.location = { name: data.estimatedPlace.slice(0, 120), source: 'AI_ESTIMATED' };
     await asset.save();
+    // Semantic-search vector for the fresh analysis (non-fatal: keyword search still works).
+    await require('../services/ai/embeddings').embedAssets([asset.toObject()]);
   } catch (err) {
     // Provider overload / rate limits: re-queue with growing delays instead of failing the asset.
     if (err.transient && asset.attempts < MAX_ATTEMPTS) {
@@ -72,7 +74,12 @@ async function analyzeMedia(id) {
     }
     logger.warn({ assetId: String(asset._id), err: err.message }, 'Media analysis failed');
     asset.processingStatus = 'FAILED';
-    asset.processingError = String(err.message).slice(0, 300);
+    // Some codecs (e.g. WebM with Vorbis audio) are rejected by the model; say so plainly.
+    const codecIssue =
+      asset.resourceType === 'video' && /\[400|invalid argument/i.test(err.message);
+    asset.processingError = codecIssue
+      ? 'The AI model could not read this video’s format. Upload it as MP4 (H.264) or MOV, or configure Cloudinary to convert it automatically.'
+      : String(err.message).slice(0, 300);
     await asset.save();
   }
 }

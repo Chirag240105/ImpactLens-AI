@@ -18,31 +18,32 @@
     "seed:real:reset": "node utils/seedRealData.js --reset"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
     "@google/generative-ai": "^0.24.1",
+    "bcryptjs": "^2.4.3",
     "cloudinary": "^2.0.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "exif-parser": "^0.1.12",
     "express": "^4.19.2",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.4.0",
-    "multer": "^1.4.5-lts.1",
-    "cookie-parser": "^1.4.7",
     "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^7.5.0",
     "express-validator": "^7.2.1",
-    "exif-parser": "^0.1.12",
     "helmet": "^7.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.4.0",
+    "multer": "^1.4.5-lts.1",
     "openai": "^4.80.0",
     "pdfkit": "^0.15.0",
-    "pino": "^9.6.0"
+    "pino": "^9.6.0",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "eslint": "^8.57.1",
-    "prettier": "^3.5.0",
     "jest": "^29.7.0",
     "mongodb-memory-server": "^10.1.4",
     "nodemon": "^3.1.0",
+    "prettier": "^3.5.0",
     "supertest": "^7.0.0"
   },
   "jest": {

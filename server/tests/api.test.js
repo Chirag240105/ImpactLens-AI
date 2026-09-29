@@ -1,3 +1,6 @@
+// Offline, deterministic tests: never use real AI/Cloudinary keys from a local .env.
+process.env.AI_PROVIDER = 'mock';
+process.env.CLOUDINARY_MODE = 'mock';
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const request = require('supertest');
@@ -244,6 +247,22 @@ describe('ImpactLens API integration', () => {
       .query({ q: 'plant(ation', projectId, activity: '((' })
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
+  });
+  test('integrity flags the same file uploaded twice and scores the project', async () => {
+    const r = await request(app)
+      .get(`/api/projects/${projectId}/integrity`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(r.body.data.assetsChecked).toBe(2);
+    expect(r.body.data.byFlag.DUPLICATE_EXACT).toBe(2);
+    expect(r.body.data.score).toBeLessThan(100);
+    expect(r.body.data.assets[0].integrity.flags.map((f) => f.code)).toContain('DUPLICATE_EXACT');
+    const list = await request(app)
+      .get('/api/media')
+      .query({ projectId })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(list.body.data.items[0].integrity.flags.length).toBeGreaterThan(0);
   });
   test('comparisons are returned with media cards', async () => {
     const r = await request(app)

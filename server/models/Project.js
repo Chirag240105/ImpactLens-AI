@@ -12,6 +12,8 @@ const schema = new mongoose.Schema(
     goals: [String],
     status: { type: String, enum: PROJECT_STATUS, default: 'DRAFT' },
     expectedEvidenceCategories: { type: [String], default: DEFAULT_CATEGORIES },
+    // Integrity check: media further than this from the project location is flagged; null = multi-site.
+    siteRadiusKm: { type: Number, default: 50, min: 1 },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true },

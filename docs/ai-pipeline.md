@@ -18,7 +18,23 @@ Each asset is saved as `PENDING` and queued. The worker marks it `PROCESSING`, t
 - **Impact story and campaign copy** are generated from an evidence digest built from the database: counts, activities, locations, date range, coverage gaps, sample observations and insights. Nothing is taken from free text.
 - **Reliability:** rate-limit and 5xx errors are retried with backoff; unavailable models fall through to the next. Per-image tagging runs with the thinking budget off for speed.
 
-**Media input:** local files are read from disk, Cloudinary images use a 1600px derivative, and videos are analyzed from a mid-point frame (Cloudinary only). External open-licence images use their source URL.
+**Media input:** local files are read from disk, Cloudinary images use a 1600px derivative, and videos are sent as clips (see Video). External open-licence images use their source URL.
+
+## Video
+
+Videos are analyzed by Gemini natively (the whole clip, not a single frame): local files up to 18 MB are sent inline; with Cloudinary a 640px MP4 transcode is sent (so any codec works), falling back to the mid-point frame. Some codecs (e.g. WebM with Vorbis audio) are rejected by the model without Cloudinary; the asset then fails with an explanation and can be re-uploaded as MP4/MOV.
+
+## Semantic search
+
+After analysis, each asset's description, activities, objects, signals, tags and place are embedded with `gemini-embedding-001` (768 dims, normalised) and stored on the asset. Queries are embedded with the retrieval-query task type and ranked by cosine similarity blended with keyword matches. Without a Gemini key, search stays keyword-only. `npm run seed:real` backfills missing vectors.
+
+## Evidence integrity (anti-greenwashing)
+
+On ingest every file gets a SHA-256 (exact duplicates) and a 64-bit difference hash (near-duplicates that survive resizing/re-compression), and its camera EXIF (make, model, software) is recorded. Integrity checks run per project against the whole collection and flag: exact or near-duplicate reuse (including across projects), missing camera metadata, editing software, capture dates in the future or outside the project window (±30 days), GPS further than the project's `siteRadiusKm` from its location, missing or AI-only locations, and images the AI judged not to be field evidence. Each asset gets a 0–100 score (high −40, medium −20, low −8); flags are signals for human review, not verdicts.
+
+## UN SDG alignment
+
+A transparent rules table (`shared/constants/sdg.js`) maps AI-detected activities, signals, objects and tags (confidence ≥ 0.5) to Sustainable Development Goals, recording which terms matched. Projects and reports show evidence counts per goal, described as "aligned with", never as a measured contribution.
 
 ## Trust rules
 

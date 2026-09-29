@@ -15,6 +15,9 @@ const schema = new mongoose.Schema(
     // Where the original lives: cloudinary, local disk fallback, or an external open-licence source.
     storage: { type: String, enum: ['cloudinary', 'local', 'external'], default: 'cloudinary' },
     phash: String,
+    // Duplicate detection (exact bytes + perceptual) and camera metadata for integrity checks.
+    fingerprint: { sha256: String, dhash: String },
+    camera: { hasExif: Boolean, make: String, model: String, software: String },
     attribution: {
       source: String,
       title: String,
@@ -62,10 +65,12 @@ const schema = new mongoose.Schema(
     ],
     analysis: { model: String, provider: String, version: String, analyzedAt: Date },
     embedding: { type: [Number], select: false },
+    embeddingModel: String,
   },
   { timestamps: true },
 );
 schema.index({ projectId: 1, captureDate: 1 });
+schema.index({ 'fingerprint.sha256': 1 });
 schema.index({ projectId: 1, processingStatus: 1 });
 schema.index({ projectId: 1, 'activities.name': 1 });
 schema.index({ tags: 'text', aiDescription: 'text', aiSummary: 'text', originalFilename: 'text' });

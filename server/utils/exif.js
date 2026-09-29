@@ -1,19 +1,26 @@
+/**
+ * Reads capture date, GPS and camera details from JPEG EXIF. Works on a partial buffer (EXIF sits
+ * at the start of the file). Never throws: malformed metadata must not reject a valid upload.
+ */
 function extractExif(buffer) {
   try {
     const parser = require('exif-parser').create(buffer);
+    parser.enableSimpleValues(true);
     const result = parser.parse();
-    const captureDate = result.tags?.DateTimeOriginal || result.tags?.CreateDate;
-    const latitude = result.tags?.GPSLatitude;
-    const longitude = result.tags?.GPSLongitude;
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude))
-      return { captureDate: captureDate ? new Date(captureDate * 1000) : undefined };
-    return {
-      captureDate: captureDate ? new Date(captureDate * 1000) : undefined,
-      location: { lat: latitude, lng: longitude, source: 'GPS_VERIFIED' },
+    const t = result.tags || {};
+    const captureDate = t.DateTimeOriginal || t.CreateDate;
+    const camera = {
+      hasExif: Object.keys(t).length > 0,
+      make: t.Make ? String(t.Make).trim().slice(0, 60) : undefined,
+      model: t.Model ? String(t.Model).trim().slice(0, 60) : undefined,
+      software: t.Software ? String(t.Software).trim().slice(0, 80) : undefined,
     };
+    const out = { captureDate: captureDate ? new Date(captureDate * 1000) : undefined, camera };
+    if (Number.isFinite(t.GPSLatitude) && Number.isFinite(t.GPSLongitude))
+      out.location = { lat: t.GPSLatitude, lng: t.GPSLongitude, source: 'GPS_VERIFIED' };
+    return out;
   } catch (_err) {
-    // EXIF is user supplied and malformed metadata must not reject a valid upload.
-    return {};
+    return { camera: { hasExif: false } };
   }
 }
 module.exports = { extractExif };

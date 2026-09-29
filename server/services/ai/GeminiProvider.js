@@ -14,7 +14,7 @@ const DEFAULT_MODELS = [
   'gemini-3.1-flash-lite',
   'gemini-flash-lite-latest',
 ];
-const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 18 * 1024 * 1024; // inline media limit (Gemini allows ~20 MB per request)
 
 const scored = {
   type: T.ARRAY,
@@ -131,7 +131,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const statusOf = (err) =>
   err?.status || Number(String(err?.message || '').match(/\[(\d{3})/)?.[1]) || 0;
 
-/** Loads an image for inline upload: accepts {data, mimeType} directly or fetches a URL. */
+/**
+ * Loads media for inline upload: accepts {data, mimeType} directly or fetches a URL. Videos are
+ * sent whole (Gemini watches the clip); a video that is too large falls back to `fallbackUrl`.
+ */
 async function toInlinePart(image) {
   if (image?.data)
     return {
@@ -142,18 +145,23 @@ async function toInlinePart(image) {
     };
   const url = typeof image === 'string' ? image : image?.url;
   if (!url) throw new Error('No image supplied for analysis');
+  const isVideo = image?.kind === 'video';
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
+  const timeout = setTimeout(() => controller.abort(), isVideo ? 60000 : 20000);
   try {
     const r = await fetch(url, {
       signal: controller.signal,
       headers: { 'User-Agent': 'ImpactLens/1.0 (evidence analysis)' },
     });
-    if (!r.ok) throw new Error(`Image fetch failed (${r.status})`);
+    if (!r.ok) throw new Error(`Media fetch failed (${r.status})`);
     const buf = Buffer.from(await r.arrayBuffer());
-    if (buf.length > MAX_IMAGE_BYTES) throw new Error('Image is too large to analyze');
     const mimeType = r.headers.get('content-type')?.split(';')[0] || 'image/jpeg';
-    if (!mimeType.startsWith('image/')) throw new Error(`Expected an image but got ${mimeType}`);
+    if (buf.length > MAX_IMAGE_BYTES) {
+      if (image?.fallbackUrl) return toInlinePart({ url: image.fallbackUrl, kind: 'image' });
+      throw new Error('Media is too large to analyze');
+    }
+    if (!mimeType.startsWith('image/') && !(isVideo && mimeType.startsWith('video/')))
+      throw new Error(`Expected an image but got ${mimeType}`);
     return { inlineData: { data: buf.toString('base64'), mimeType } };
   } finally {
     clearTimeout(timeout);
@@ -283,7 +291,7 @@ class GeminiProvider {
     const part = await toInlinePart(image || imageUrl);
     const categories = (context.categories || []).join(', ');
     const prompt = `${TRUST_RULES}
-Analyze this photo submitted as evidence for the project "${context.projectName || 'unknown'}"${context.projectCategory ? ` (${context.projectCategory})` : ''}${context.projectLocation ? ` in ${context.projectLocation}` : ''}.
+Analyze this ${image?.kind === 'video' ? 'video clip (consider the whole clip, not one frame)' : 'photo'} submitted as evidence for the project "${context.projectName || 'unknown'}"${context.projectCategory ? ` (${context.projectCategory})` : ''}${context.projectLocation ? ` in ${context.projectLocation}` : ''}.
 ${categories ? `When an activity matches one of these project evidence categories, use that exact name: ${categories}.` : ''}
 Also detect environmental signals such as vegetation, water, waste, soil, erosion, air, built infrastructure.
 Keep every name short (1-3 lowercase words, e.g. "vegetation", "plastic waste", "saplings"); put details in the description, never in parentheses.
