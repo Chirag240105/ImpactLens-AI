@@ -1,0 +1,52 @@
+openapi: 3.0.3
+info:
+  title: ImpactLens AI API
+  version: 1.0.0
+servers:
+  - url: /api
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    Envelope:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: object, additionalProperties: true }
+        meta: { type: object, additionalProperties: true }
+security: [{ bearerAuth: [] }]
+paths:
+  /health: { get: { security: [], summary: Health check, responses: { '200': { description: Status } } } }
+  /auth/register: { post: { security: [], summary: Register, responses: { '201': { description: User and token } } } }
+  /auth/login: { post: { security: [], summary: Login, responses: { '200': { description: User and token } } } }
+  /auth/me: { get: { summary: Current user, responses: { '200': { description: User } } } }
+  /auth/logout: { post: { summary: Logout, responses: { '200': { description: Acknowledgement } } } }
+  /projects: { get: { summary: List projects, responses: { '200': { description: Paginated projects } } }, post: { summary: Create project, responses: { '201': { description: Project } } } }
+  /projects/{id}: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], get: { summary: Get project, responses: { '200': { description: Project } } }, patch: { summary: Update project, responses: { '200': { description: Project } } }, delete: { summary: Archive project, responses: { '200': { description: Project } } } }
+  /projects/{id}/analyze: { post: { summary: Queue project analysis, responses: { '202': { description: Queued count } } } }
+  /projects/{id}/processing-status: { get: { summary: Processing counts, responses: { '200': { description: Status counts } } } }
+  /projects/{id}/dashboard: { get: { summary: Project dashboard, responses: { '200': { description: KPIs } } } }
+  /projects/{id}/timeline: { get: { summary: Project timeline, responses: { '200': { description: Timeline } } } }
+  /projects/{id}/locations: { get: { summary: Project locations, responses: { '200': { description: Locations } } } }
+  /projects/{id}/coverage: { get: { summary: Evidence coverage, responses: { '200': { description: Coverage and gaps } } } }
+  /projects/{id}/comparisons: { get: { summary: Comparisons, responses: { '200': { description: Comparisons } } } }
+  /projects/{id}/pair-suggestions: { get: { summary: Suggested pairs, responses: { '200': { description: Candidate pairs } } } }
+  /projects/{id}/insights: { get: { summary: List insights, responses: { '200': { description: Insights } } } }
+  /projects/{id}/insights/generate: { post: { summary: Generate insights, responses: { '201': { description: Insights } } } }
+  /projects/{id}/reports: { get: { summary: Project reports, responses: { '200': { description: Paginated reports } } } }
+  /media/sign: { post: { summary: Direct upload signing (disabled), responses: { '501': { description: Disabled in current implementation } } } }
+  /media/upload: { post: { summary: Upload media (multipart), responses: { '202': { description: Created media assets } } } }
+  /media: { get: { summary: List media, responses: { '200': { description: Paginated media } } } }
+  /media/{id}: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], get: { summary: Get media, responses: { '200': { description: Asset } } }, patch: { summary: Correct media metadata, responses: { '200': { description: Asset } } }, delete: { summary: Delete media, responses: { '200': { description: Deleted } } } }
+  /media/{id}/analyze: { post: { summary: Retry analysis, responses: { '202': { description: Queued asset } } } }
+  /search: { get: { summary: Search evidence, parameters: [{ in: query, name: q, schema: { type: string } }, { in: query, name: page, schema: { type: integer } }, { in: query, name: limit, schema: { type: integer } }], responses: { '200': { description: Ranked evidence results } } } }
+  /analysis/compare: { post: { summary: Compare two media assets, responses: { '200': { description: Comparison } } } }
+  /insights/{id}/trace: { get: { summary: Trace insight sources, responses: { '200': { description: Evidence trace } } } }
+  /dashboard/overview: { get: { summary: Organization overview, responses: { '200': { description: Overview } } } }
+  /reports/generate: { post: { summary: Generate report, responses: { '201': { description: Report } } } }
+  /reports/story: { post: { summary: Generate impact story, responses: { '200': { description: Story } } } }
+  /reports/campaign: { post: { summary: Generate campaign content, responses: { '200': { description: Campaign content } } } }
+  /reports/{id}: { get: { summary: Read report, responses: { '200': { description: Report } } } }
+  /reports/{id}/pdf: { get: { summary: Download PDF report, responses: { '200': { description: Generated PDF document } } } }
+  /reports/{id}/publish: { patch: { summary: Publish report, responses: { '200': { description: Share URL } } } }
+  /reports/public/{slug}: { get: { security: [], summary: Fetch sanitized public report, responses: { '200': { description: Public report DTO } } } }

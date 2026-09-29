@@ -1,25 +1,15 @@
-# Server
+# ImpactLens API server
 
-Express + MongoDB + Cloudinary + AI services. Primary owner: **Chirag**
-(support: Avnish on `services/analysis` + `jobs`, Atharv on `services/report`).
+Node 20 / Express 4 / CommonJS service backed by MongoDB and Cloudinary. The exported Express app is `app.js`; `server.js` handles connection, queue recovery, listening, and graceful shutdown.
 
-```
-server/
-├── controllers/     route handlers
-├── routes/          route definitions, mounted in app.js
-├── models/          mongoose schemas (User, Project, MediaAsset, Analysis, Report)
-├── middleware/       auth guard, error handler, upload validation
-├── services/
-│   ├── cloudinary/  upload + transformation helpers
-│   ├── ai/          AIProvider abstraction + implementation(s)
-│   ├── search/       query understanding + mongo filter builder
-│   ├── report/       report assembly + PDF export + public slug
-│   └── analysis/     before/after pairing, comparison, coverage, gap detection
-├── jobs/            background worker(s) for async AI analysis
-├── utils/           helpers, seed script
-└── app.js           Express app entrypoint
+From this directory, copy `../.env.example` to `.env`, set `MONGODB_URI` and `JWT_SECRET`, then run:
+
+```sh
+npm install
+npm run dev
+npm run seed
+npm test
+npm run smoke
 ```
 
-Run: `npm install && npm run dev` (copy `.env.example` from repo root to `.env` first).
-
-See `/docs/api.md` for the route contract and `/docs/ai-pipeline.md` for the AI flow.
+`AI_PROVIDER=mock` works offline. Demo credentials and API contracts are in the root README and `../docs/api.md`. Deployment caveats and known partial integrations are documented in `../docs/deployment.md` and `../README.md`.
