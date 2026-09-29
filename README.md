@@ -14,15 +14,16 @@ Features: JWT auth and project roles; project/media metadata; Cloudinary adapter
 | Mongo models | ✅ Done | Six timestamped schemas and core indexes. |
 | Auth and RBAC | 🟡 Partial | JWT/register/login and owner checks; open registration and organization membership are demo-level. |
 | Projects | ✅ Done | CRUD, paging, archiving and access check. |
-| Media / Cloudinary | 🟡 Partial | Buffer upload, safe EXIF extraction, and mock placeholder mode; strict signature checks and transform persistence need work. |
-| Queue / AI | 🟡 Partial | Recoverable in-process queue and deterministic mock; distributed durability and real-provider quality checks remain. |
+| Media / Cloudinary | 🟡 Partial | Cloudinary upload with EXIF + perceptual hash, smart-crop (`g_auto`) thumbnails, video frame URLs and before/after composites; startup credential check with a local-disk fallback. Real Cloudinary uploads still need a valid cloud name to verify. |
+| Queue / AI | ✅ Done | Gemini vision with schema-constrained JSON (observed vs inferred, calibrated confidence), two-image comparison, evidence-grounded story/campaign; retries and model fallback. The in-process queue is not multi-replica durable. |
 | Search | 🟡 Partial | Mongo keyword filtering; no semantic ranking or vector search. |
 | Analysis / insight | 🟡 Partial | Timeline, coverage, heuristic pairs, mocked comparison and evidence trace. |
 | Dashboard | 🟡 Partial | Aggregation-backed project KPIs; broader analytics/cache work remains. |
 | Reports / PDF | 🟡 Partial | Structured reports, story/campaign, simple PDFKit export, sanitized public fetch; visual polish remains. |
-| Seed / smoke | 🟡 Partial | Idempotent 45-asset seed and full judge-flow smoke script; execution needs a running seeded API. |
+| Seed / smoke | ✅ Done | `npm run seed:real` imports 28 openly licensed Wikimedia Commons field photos (real dates, locations, attribution) and analyzes them; `npm run seed` stays the synthetic test fixture. |
 | Tests / CI | 🟡 Partial | Nine API tests, coverage, lint, and full mock-mode smoke pass; real provider smoke remains. |
 | Docs / deployment | 🟡 Partial | API, OpenAPI, collection, architecture and deployment docs; production behavior unverified. |
+| Frontend (client) | ✅ Done | React 18 + TypeScript + Tailwind v4 SPA covering the full judge flow; design system in [DESIGN.md](DESIGN.md); Vitest, Playwright E2E and axe checks. See [client/README.md](client/README.md). |
 
 ## Architecture diagrams
 
@@ -58,7 +59,7 @@ Caption: Request handling stays above business logic, persistence, and SDK adapt
 
 ```mermaid
 flowchart TD
-  Repo[ImpactLens-AI] --> Client[client unchanged]
+  Repo[ImpactLens-AI] --> Client[client React SPA]
   Repo --> Server[server]
   Server --> Config[config]
   Server --> Models[models]
@@ -263,10 +264,13 @@ Prerequisites: Node 20+, npm, MongoDB (local or hosted). Copy `.env.example` to 
 cd server
 npm install
 npm run dev
-npm run seed
+npm run seed        # synthetic offline fixture (tests)
+npm run seed:real   # real openly licensed photos + AI analysis (demo)
 npm test
 npm run smoke
 ```
+
+Frontend: `cd client && npm install && npm run dev`, then open http://localhost:3000 (Vite proxies `/api` to the server on :5000). `npm run build` type-checks and builds to `client/dist/`; `npm test` and `npm run test:e2e` run the client suites. Details in [client/README.md](client/README.md).
 
 The demo seed prints credentials: `admin@impactlens.demo / Admin123!`, `manager@impactlens.demo / Manager123!`, `viewer@impactlens.demo / Viewer123!`. Change these before any shared deployment.
 
@@ -289,6 +293,9 @@ The demo seed prints credentials: `admin@impactlens.demo / Admin123!`, `manager@
 | `MAX_UPLOAD_MB` | No | Upload size limit | `50` |
 | `RATE_LIMIT_WINDOW_MS` | No | Rate window | `900000` |
 | `RATE_LIMIT_MAX` | No | General request cap | `200` |
+| `RATE_LIMIT_ACTION_MAX` | No | Upload/analysis/generation budget per window (login has its own failed-attempt limit) | `120` |
+| `COOKIE_SAMESITE` | No | Session cookie policy: `lax` for same-site deploys, `none` for a cross-site API (HTTPS) | `lax` |
+| `SESSION_MAX_AGE_MS` | No | Session cookie lifetime | `604800000` |
 
 Docker: `cd server && docker compose up --build`. Scripts: `npm start`, `npm run test:coverage`, `npm run lint`, `npm run seed:reset`, `npm run smoke`.
 
@@ -302,24 +309,23 @@ Docker: `cd server && docker compose up --build`. Scripts: `npm start`, `npm run
 - [x] API docs, partial OpenAPI spec, Postman collection, Docker files and CI workflow.
 - [x] API integration tests pass (9 tests), coverage run passes, and ESLint passes.
 - [x] Full `npm run smoke` passed against the seeded API in mock AI / mock Cloudinary mode.
-- [ ] Real Cloudinary and AI provider smoke remains unverified.
+- [x] Gemini analysis verified on real photos and uploads.
+- [ ] Real Cloudinary upload smoke remains unverified (needs the correct cloud name).
 
 ## 🛠️ Manual work still required
 
 - Create/rotate production JWT, MongoDB, Cloudinary, and AI credentials. Configure provider keys outside source control.
-- Set real provider keys, verify Gemini/OpenAI/Groq outputs and tune prompts against genuine project images.
 - Confirm Cloudinary folder/preset behavior, upload/delete, metadata/EXIF, video preview, and transformed thumbnail behavior.
-- Upload real demo photos/videos; the seed uses placeholder URLs and 45 synthetic metadata records.
+- Replace the Wikimedia demo dataset with the NGO's own project photos and videos when available.
 - Implement direct signed upload, robust file signature detection, video frame extraction, and a durable distributed job queue.
 - Add branded report layout, charts, images, and evidence trace table to the current basic PDFKit export.
 - Configure production environment, Atlas network allowlist/backups, frontend CORS, domain/share route, and deployment.
-- Connect the React frontend using [docs/api.md](docs/api.md); client was intentionally left untouched.
 - Verify public-report privacy/legal basis, retention rules, real-provider quality, rate limits, and performance under load.
 - Set up Atlas Vector Search only if semantic retrieval is later implemented; it is currently unused.
 
 ## Known limitations and assumptions
 
-MockProvider supplies deterministic demonstration labels, not computer vision. Current search is keyword matching; pairing and coverage are heuristics. The queue is in-process and not safe as a multi-replica durable queue. Cloudinary-off mode returns demo placeholder URLs. Public registration assigns the first account ADMIN and subsequent accounts VIEWER. PDF export has a basic layout; signing, video frame extraction, advanced filtering, cache invalidation, and malformed AI response repair are incomplete.
+With `AI_PROVIDER=mock`, MockProvider supplies deterministic demonstration labels, not computer vision (Gemini is used whenever a key is configured). Current search is keyword matching; pairing and coverage are heuristics. The queue is in-process and not safe as a multi-replica durable queue. Without Cloudinary, media is stored on the API server's disk and videos can't be frame-analyzed. Public registration assigns the first account ADMIN and subsequent accounts VIEWER. PDF export has a basic layout; signing, video frame extraction, advanced filtering, cache invalidation, and malformed AI response repair are incomplete.
 
 ## AI trust principle
 

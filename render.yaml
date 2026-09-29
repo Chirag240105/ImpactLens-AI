@@ -1,0 +1,41 @@
+# Render Blueprint for the ImpactLens API (https://render.com/docs/blueprint-spec).
+# The client is deployed separately (see client/vercel.json) and proxies /api here.
+services:
+  - type: web
+    name: impactlens-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm install --workspaces=false --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: '20'
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      # Exact client origin, e.g. https://impactlens.vercel.app
+      - key: CLIENT_URL
+        sync: false
+      - key: PUBLIC_REPORT_BASE_URL
+        sync: false
+      # Browser -> Vercel -> Render: trust two proxy hops so rate limits key on the real client IP.
+      - key: TRUST_PROXY
+        value: '2'
+      - key: COOKIE_SAMESITE
+        value: lax
