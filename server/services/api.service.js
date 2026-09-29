@@ -14,6 +14,48 @@ const { createProvider } = require('./ai/providerFactory');
 const cloud = require('./cloudinary/upload.service');
 const { projectFolder } = require('./cloudinary/folders');
 const { enqueue } = require('../jobs/queue');
+const {
+  deliveryUrls,
+  isCloudinaryAsset,
+  comparisonComposite,
+} = require('./cloudinary/transform.service');
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const withUrls = (a) => (a ? { ...a, ...deliveryUrls(a) } : a);
+// List DTO: secureUrl stays internal; the browser gets delivery URLs instead.
+const listItem = (a) => {
+  const out = withUrls(a);
+  delete out.secureUrl;
+  return out;
+};
+const lean = (a) => (a && typeof a.toObject === 'function' ? a.toObject() : a);
+// Compact card DTO for lists that reference media (pairs, comparisons, timeline highlights).
+const mediaCard = (a) =>
+  a && {
+    _id: a._id,
+    ...deliveryUrls(a),
+    resourceType: a.resourceType,
+    originalFilename: a.originalFilename,
+    captureDate: a.captureDate,
+    evidenceType: a.evidenceType,
+    location: a.location,
+    activities: a.activities,
+    aiConfidence: a.aiConfidence,
+  };
+const SEARCH_STOPWORDS = new Set(
+  'a an and any all are at by evidence find for from get in is me of on or photos images media pictures please show some that the this to where which with'.split(
+    ' ',
+  ),
+);
+const SEARCH_FIELDS = [
+  'tags',
+  'aiDescription',
+  'aiSummary',
+  'originalFilename',
+  'activities.name',
+  'objects.name',
+  'environmentalSignals.name',
+  'location.name',
+];
 const allowed = (p, u) =>
   u.role === 'ADMIN' || String(p.createdBy) === String(u._id) || p.organization === u.organization;
 async function project(id, user) {
@@ -80,8 +122,7 @@ exports.deleteProject = async (id, u) => {
   await p.save();
   return p;
 };
-exports.listMedia = async (q, u) => {
-  const { page, limit, skip } = pageOf(q);
+async function mediaFilter(q, u) {
   const f = {};
   if (q.projectId) {
     await project(q.projectId, u);
@@ -90,24 +131,41 @@ exports.listMedia = async (q, u) => {
     const ps = await Project.find({ createdBy: u._id }).select('_id').lean();
     f.projectId = { $in: ps.map((x) => x._id) };
   }
-  for (const k of ['evidenceType', 'resourceType', 'processingStatus']) if (q[k]) f[k] = q[k];
-  if (q.activity) f['activities.name'] = new RegExp(q.activity, 'i');
-  if (q.object) f['objects.name'] = new RegExp(q.object, 'i');
+  for (const k of ['evidenceType', 'resourceType', 'processingStatus'])
+    if (q[k]) f[k] = String(q[k]);
+  const like = (v) => new RegExp(escapeRegex(v), 'i');
+  if (q.activity) f['activities.name'] = like(q.activity);
+  if (q.object) f['objects.name'] = like(q.object);
+  if (q.signal) f['environmentalSignals.name'] = like(q.signal);
+  if (q.location) f['location.name'] = like(q.location);
+  if (q.locationSource) f['location.source'] = String(q.locationSource);
+  if (Number.isFinite(Number(q.minConfidence)) && q.minConfidence !== '')
+    f.aiConfidence = { $gte: Number(q.minConfidence) };
   if (q.from || q.to)
     f.captureDate = {
       ...(q.from ? { $gte: new Date(q.from) } : {}),
       ...(q.to ? { $lte: new Date(q.to) } : {}),
     };
+  return f;
+}
+exports.listMedia = async (q, u) => {
+  const { page, limit, skip } = pageOf(q);
+  const f = await mediaFilter(q, u);
   const [items, total] = await Promise.all([
     Media.find(f)
-      .select('-embedding -secureUrl')
+      .select('-embedding')
       .sort({ captureDate: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean(),
     Media.countDocuments(f),
   ]);
-  return { items, total, page, limit };
+  return {
+    items: items.map(listItem),
+    total,
+    page,
+    limit,
+  };
 };
 exports.upload = async (files, body, u) => {
   if (!files?.length)
@@ -137,13 +195,14 @@ exports.upload = async (files, body, u) => {
     const up = await cloud.uploadBuffer(file.buffer, {
       mime: file.mimetype,
       folder: projectFolder(body.projectId, body.evidenceType),
-      resource_type: 'auto',
     });
     const a = await Media.create({
       projectId: body.projectId,
       uploadedBy: u._id,
       cloudinaryPublicId: up.public_id,
       secureUrl: up.secure_url,
+      storage: up.storage || 'cloudinary',
+      phash: up.phash,
       resourceType: up.resource_type === 'video' ? 'video' : 'image',
       format: up.format,
       bytes: up.bytes,
@@ -160,7 +219,7 @@ exports.upload = async (files, body, u) => {
   }
   return saved;
 };
-exports.getMedia = media;
+exports.getMedia = async (id, u) => withUrls(lean(await media(id, u)));
 exports.updateMedia = async (id, b, u) => {
   const a = await media(id, u);
   for (const k of ['location', 'evidenceType', 'captureDate']) if (b[k] !== undefined) a[k] = b[k];
@@ -181,15 +240,51 @@ exports.retryMedia = async (id, u) => {
   return a;
 };
 exports.search = async (q, u) => {
-  const out = await exports.listMedia({ ...q, search: undefined }, u);
-  const words = String(q.q || '')
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean);
-  const items = out.items.filter(
-    (a) => !words.length || words.some((w) => JSON.stringify(a).toLowerCase().includes(w)),
-  );
-  return { ...out, items, queryUnderstanding: { keywords: words, provider: config.aiProvider } };
+  const words = [
+    ...new Set(
+      String(q.q || '')
+        .toLowerCase()
+        .split(/[^a-z0-9-]+/)
+        .filter((w) => w.length > 1 && !SEARCH_STOPWORDS.has(w)),
+    ),
+  ].slice(0, 8);
+  if (!words.length)
+    return {
+      ...(await exports.listMedia(q, u)),
+      queryUnderstanding: { keywords: [], provider: config.aiProvider },
+    };
+  const { page, limit, skip } = pageOf(q);
+  const f = await mediaFilter(q, u);
+  const patterns = words.map((w) => new RegExp(escapeRegex(w), 'i'));
+  f.$or = SEARCH_FIELDS.flatMap((field) => patterns.map((p) => ({ [field]: p })));
+  // Candidate set is bounded, then ranked by how many query words each asset matches.
+  const candidates = await Media.find(f)
+    .select('-embedding')
+    .sort({ captureDate: -1 })
+    .limit(1000)
+    .lean();
+  const ranked = candidates
+    .map((a) => {
+      const text = SEARCH_FIELDS.map((field) =>
+        field.split('.').reduce((v, k) => (Array.isArray(v) ? v.map((x) => x?.[k]) : v?.[k]), a),
+      )
+        .flat()
+        .join(' ')
+        .toLowerCase();
+      const matched = words.filter((w) => text.includes(w));
+      return { a, score: matched.length, matched };
+    })
+    .sort((x, y) => y.score - x.score);
+  const items = ranked.slice(skip, skip + limit).map(({ a, score, matched }) => {
+    return { ...listItem(a), searchScore: score / words.length, matchedTerms: matched };
+  });
+  return {
+    items,
+    total: ranked.length,
+    page,
+    limit,
+    queryUnderstanding: { keywords: words, provider: config.aiProvider },
+  };
 };
 exports.compare = async (b, u) => {
   const [before, after] = await Promise.all([
@@ -198,7 +293,14 @@ exports.compare = async (b, u) => {
   ]);
   if (String(before.projectId) !== String(after.projectId))
     throw new ApiError(400, 'VALIDATION_ERROR', 'Media must belong to the same project');
+  const { imageInputFor } = require('./media/imageInput');
+  const [beforeImage, afterImage] = await Promise.all([
+    imageInputFor(before),
+    imageInputFor(after),
+  ]);
   const result = await createProvider().compareImages({
+    before: beforeImage,
+    after: afterImage,
     beforeUrl: before.secureUrl,
     afterUrl: after.secureUrl,
   });
@@ -209,14 +311,24 @@ exports.compare = async (b, u) => {
     result,
     confidence: result.confidence,
     provider: config.aiProvider,
-    model: 'impactlens-mock-v1',
+    model:
+      result.model ||
+      (config.aiProvider === 'mock' ? 'impactlens-mock-v1' : config.aiModel || config.aiProvider),
     version: 'v1',
   });
   return {
     ...result,
     analysisId: doc._id,
-    beforeUrl: before.secureUrl,
-    afterUrl: after.secureUrl,
+    createdAt: doc.createdAt,
+    beforeUrl: deliveryUrls(before).previewUrl,
+    afterUrl: deliveryUrls(after).previewUrl,
+    before: mediaCard(before),
+    after: mediaCard(after),
+    // Cloudinary-rendered side-by-side image, when both captures live in Cloudinary.
+    compositeUrl:
+      isCloudinaryAsset(before) && isCloudinaryAsset(after)
+        ? comparisonComposite(before.cloudinaryPublicId, after.cloudinaryPublicId)
+        : undefined,
     capturedBefore: before.captureDate,
     capturedAfter: after.captureDate,
   };
@@ -235,16 +347,23 @@ exports.timeline = async (id, u) => {
     const key = d.toISOString().slice(0, 7);
     groups[key] ||= {
       month: key,
-      label: key.slice(5),
+      label: new Date(`${key}-01T00:00:00Z`).toLocaleString('en-US', {
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'UTC',
+      }),
       assetCount: 0,
       activities: [],
       highlights: [],
       assetIds: [],
+      evidenceTypes: {},
     };
     const g = groups[key];
     g.assetCount++;
     g.activities.push(...(a.activities || []).map((x) => x.name));
     g.assetIds.push(a._id);
+    g.evidenceTypes[a.evidenceType] = (g.evidenceTypes[a.evidenceType] || 0) + 1;
+    if (g.highlights.length < 4) g.highlights.push(mediaCard(a));
   }
   return Object.values(groups).map((g) => ({ ...g, activities: [...new Set(g.activities)] }));
 };
@@ -296,20 +415,86 @@ exports.locations = async (id, u) => {
 };
 exports.comparisons = async (id, u) => {
   await project(id, u);
-  return Analysis.find({ projectId: id, analysisType: 'COMPARE' }).sort({ createdAt: -1 }).lean();
+  const docs = await Analysis.find({ projectId: id, analysisType: 'COMPARE' })
+    .sort({ createdAt: -1 })
+    .populate('mediaIds')
+    .lean();
+  return docs.map((d) => ({
+    ...d,
+    mediaIds: (d.mediaIds || []).map((m) => m?._id || m),
+    before: mediaCard(d.mediaIds?.[0]),
+    after: mediaCard(d.mediaIds?.[1]),
+  }));
 };
 exports.pairs = async (id, u) => {
   const a = await exports.projectAssets(id, u);
   const before = a.filter((x) => x.evidenceType === 'BEFORE'),
     after = a.filter((x) => x.evidenceType === 'AFTER');
+  const time = (x) => new Date(x.captureDate || x.uploadDate || 0).getTime();
+  // Heuristic: prefer later "after" captures from the same named location, then any later capture.
   return before
-    .flatMap((b) => after.slice(0, 10).map((x) => ({ beforeId: b._id, afterId: x._id })))
-    .slice(0, 20);
+    .flatMap((b) =>
+      after
+        .filter((x) => time(x) >= time(b))
+        .map((x) => ({
+          b,
+          x,
+          sameLocation: Boolean(b.location?.name) && b.location?.name === x.location?.name,
+          gapDays: Math.round((time(x) - time(b)) / 86400000),
+        }))
+        .sort((p, q) => q.sameLocation - p.sameLocation || p.gapDays - q.gapDays)
+        .slice(0, 2),
+    )
+    .slice(0, 20)
+    .map(({ b, x, sameLocation, gapDays }) => ({
+      beforeId: b._id,
+      afterId: x._id,
+      before: mediaCard(b),
+      after: mediaCard(x),
+      reason: sameLocation
+        ? `Same location (${b.location.name}), ${gapDays} days apart`
+        : `${gapDays} days apart`,
+    }));
 };
 exports.generateInsights = async (id, u) => {
   const assets = await exports.projectAssets(id, u);
+  const existing = await Insight.find({ projectId: id })
+    .select('statement evidenceMediaIds')
+    .lean();
+  const seen = new Set(
+    existing.map((i) => `${i.statement}|${i.evidenceMediaIds.map(String).sort().join(',')}`),
+  );
+  const isNew = (statement, ids) => {
+    const key = `${statement}|${ids.map(String).sort().join(',')}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  };
   const docs = [];
+  // Activity-level insights cite every asset that carries the AI-detected activity.
+  const byActivity = {};
+  for (const a of assets.filter((x) => x.processingStatus === 'COMPLETED'))
+    for (const act of a.activities || [])
+      (byActivity[act.name] ||= []).push({ a, c: act.confidence });
+  for (const [name, list] of Object.entries(byActivity)) {
+    const places = [...new Set(list.map((x) => x.a.location?.name).filter(Boolean))];
+    const statement = `${list.length} media assets${places.length ? ` across ${places.join(', ')}` : ''} show AI-detected ${name.toLowerCase()} activity.`;
+    const ids = list.slice(0, 12).map((x) => x.a._id);
+    if (!isNew(statement, ids)) continue;
+    docs.push(
+      await Insight.create({
+        projectId: id,
+        statement,
+        kind: 'INFERRED',
+        evidenceMediaIds: ids,
+        model: list[0].a.analysis?.model,
+        confidence:
+          Math.round((list.reduce((s, x) => s + (x.c || 0), 0) / list.length) * 100) / 100,
+      }),
+    );
+  }
   for (const a of assets.filter((x) => x.aiSummary).slice(0, 20)) {
+    if (!isNew(a.aiSummary, [a._id])) continue;
     docs.push(
       await Insight.create({
         projectId: id,
@@ -337,6 +522,11 @@ exports.trace = async (id, u) => {
       mediaId: a._id,
       publicId: a.cloudinaryPublicId,
       url: a.secureUrl,
+      ...deliveryUrls(a),
+      originalFilename: a.originalFilename,
+      aiConfidence: a.aiConfidence,
+      observedInferred: a.observedInferred,
+      location: a.location,
       transformations: a.transformations,
       analysis: a.analysis,
       capturedAt: a.captureDate,
@@ -362,24 +552,85 @@ exports.dashboard = async (id, u) => {
     exports.coverage(id, u),
   ]);
   const x = assets[0] || {};
+  const uniq = (v) => [...new Set((v || []).flat().filter(Boolean))];
   return {
     totalMedia: x.total || 0,
     aiAnalyzed: x.analyzed || 0,
-    activities: (x.activities || []).flat().filter(Boolean),
-    locations: (x.locations || []).filter(Boolean),
+    activities: uniq(x.activities),
+    locations: uniq(x.locations),
     beforeAfterPairs: (await exports.pairs(id, u)).length,
     evidenceCoverage: coverage,
-    environmentalSignals: (x.signals || []).flat().filter(Boolean),
+    environmentalSignals: uniq(x.signals),
   };
 };
 exports.overview = async (u) => {
-  const ids =
+  const projects =
     u.role === 'ADMIN'
-      ? await Project.find().select('_id').lean()
-      : await Project.find({ createdBy: u._id }).select('_id').lean();
+      ? await Project.find().select('_id name status').lean()
+      : await Project.find({ createdBy: u._id }).select('_id name status').lean();
+  const projectIds = projects.map((x) => x._id);
+  const names = Object.fromEntries(projects.map((p) => [String(p._id), p.name]));
+  const scope = { projectId: { $in: projectIds } };
+  const [mediaCount, statusGroups, recentMedia, recentReports, reportCount] = await Promise.all([
+    Media.countDocuments(scope),
+    Media.aggregate([
+      { $match: scope },
+      { $group: { _id: '$processingStatus', count: { $sum: 1 } } },
+    ]),
+    Media.aggregate([
+      { $match: scope },
+      { $sort: { createdAt: -1 } },
+      { $limit: 200 },
+      {
+        $group: {
+          _id: {
+            projectId: '$projectId',
+            day: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+          },
+          count: { $sum: 1 },
+          at: { $max: '$createdAt' },
+        },
+      },
+      { $sort: { at: -1 } },
+      { $limit: 6 },
+    ]),
+    Report.find(scope)
+      .sort({ createdAt: -1 })
+      .limit(4)
+      .select('title projectId createdAt isPublic')
+      .lean(),
+    Report.countDocuments(scope),
+  ]);
+  const byStatus = Object.fromEntries(statusGroups.map((g) => [g._id, g.count]));
+  const recentActivity = [
+    ...recentMedia.map((g) => ({
+      type: 'UPLOAD',
+      projectId: g._id.projectId,
+      projectName: names[String(g._id.projectId)],
+      count: g.count,
+      at: g.at,
+    })),
+    ...recentReports.map((r) => ({
+      type: 'REPORT',
+      projectId: r.projectId,
+      projectName: names[String(r.projectId)],
+      reportId: r._id,
+      title: r.title,
+      isPublic: r.isPublic,
+      at: r.createdAt,
+    })),
+  ]
+    .sort((a, b) => new Date(b.at) - new Date(a.at))
+    .slice(0, 8);
   return {
-    projectCount: ids.length,
-    mediaCount: await Media.countDocuments({ projectId: { $in: ids.map((x) => x._id) } }),
+    projectCount: projects.length,
+    activeProjectCount: projects.filter((p) => p.status === 'ACTIVE').length,
+    mediaCount,
+    analyzedCount: byStatus.COMPLETED || 0,
+    pendingCount: (byStatus.PENDING || 0) + (byStatus.PROCESSING || 0),
+    failedCount: byStatus.FAILED || 0,
+    reportCount,
+    recentActivity,
   };
 };
 async function reportContent(id, u) {
@@ -390,15 +641,54 @@ async function reportContent(id, u) {
     exports.timeline(id, u),
     exports.insights(id, u),
   ]);
+  const analyzed = assets.filter((a) => a.processingStatus === 'COMPLETED');
   return {
-    overview: { name: p.name, organization: p.organization, description: p.description },
+    overview: {
+      name: p.name,
+      organization: p.organization,
+      description: p.description,
+      category: p.category,
+      location: p.location?.name,
+      startDate: p.startDate,
+      endDate: p.endDate,
+    },
+    kpis: {
+      totalMedia: assets.length,
+      aiAnalyzed: analyzed.length,
+      locations: new Set(assets.map((a) => a.location?.name).filter(Boolean)).size,
+      coveragePercent: coverage.coveragePercent,
+      averageConfidence: analyzed.length
+        ? Math.round(
+            (analyzed.reduce((s, a) => s + (a.aiConfidence || 0), 0) / analyzed.length) * 100,
+          ) / 100
+        : null,
+    },
+    coverage: {
+      coveragePercent: coverage.coveragePercent,
+      covered: coverage.covered,
+      missing: coverage.missing,
+    },
     objectives: p.goals,
     timeline,
-    mediaGallery: assets.map((a) => ({ id: a._id, url: a.secureUrl, summary: a.aiSummary })),
+    mediaGallery: assets.map((a) => ({
+      id: a._id,
+      url: a.secureUrl,
+      ...deliveryUrls(a),
+      summary: a.aiSummary,
+      evidenceType: a.evidenceType,
+      captureDate: a.captureDate,
+      location: a.location?.name,
+    })),
     activities: [...new Set(assets.flatMap((a) => (a.activities || []).map((x) => x.name)))],
     locationMap: await exports.locations(id, u),
     beforeAfter: await exports.pairs(id, u),
-    aiObservations: insights.map((x) => ({ kind: x.kind, statement: x.statement })),
+    aiObservations: insights.map((x) => ({
+      kind: x.kind,
+      statement: x.statement,
+      confidence: x.confidence,
+      model: x.model,
+      evidenceMediaIds: x.evidenceMediaIds,
+    })),
     evidenceReferences: assets.map((a) => ({
       id: a._id,
       cloudinaryPublicId: a.cloudinaryPublicId,
@@ -428,22 +718,65 @@ exports.generateReport = async (b, u) => {
   });
   return r;
 };
+/** Compact, factual evidence digest the AI must ground stories and campaign copy in. */
+async function evidenceDigest(p, u) {
+  const [assets, coverage, insights] = await Promise.all([
+    exports.projectAssets(p._id, u),
+    exports.coverage(p._id, u),
+    exports.insights(p._id, u),
+  ]);
+  const analyzed = assets.filter((a) => a.processingStatus === 'COMPLETED');
+  const count = (list) =>
+    Object.entries(
+      list.reduce((m, k) => {
+        if (k) m[k] = (m[k] || 0) + 1;
+        return m;
+      }, {}),
+    )
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([name, n]) => ({ name, assets: n }));
+  const dates = assets
+    .map((a) => a.captureDate || a.uploadDate)
+    .filter(Boolean)
+    .map((d) => new Date(d).getTime())
+    .sort((a, b) => a - b);
+  return {
+    mediaAssets: assets.length,
+    analyzed: analyzed.length,
+    activities: count(analyzed.flatMap((a) => (a.activities || []).map((x) => x.name))),
+    environmentalSignals: count(
+      analyzed.flatMap((a) => (a.environmentalSignals || []).map((x) => x.name)),
+    ),
+    locations: count(assets.map((a) => a.location?.name)),
+    dateRange: dates.length
+      ? {
+          from: new Date(dates[0]).toISOString().slice(0, 10),
+          to: new Date(dates.at(-1)).toISOString().slice(0, 10),
+        }
+      : null,
+    evidenceCoveragePercent: coverage.coveragePercent,
+    evidenceGaps: coverage.gaps.map((g) => g.message),
+    sampleObservations: analyzed
+      .flatMap((a) => a.observedInferred?.observed || [])
+      .filter((v, i, arr) => arr.indexOf(v) === i)
+      .slice(0, 10),
+    insightStatements: insights.slice(0, 8).map((i) => i.statement),
+  };
+}
 exports.story = async (b, u) => {
   const p = await project(b.projectId, u);
+  const evidence = await evidenceDigest(p, u);
   return {
     title: p.name,
-    story: await createProvider().generateSummary({ project: p }),
-    disclaimer: 'AI-generated; verify against project records.',
+    story: await createProvider().generateSummary({ project: p, evidence }),
+    disclaimer: 'AI-generated from analyzed field media; verify against project records.',
   };
 };
 exports.campaign = async (b, u) => {
   const p = await project(b.projectId, u);
-  return {
-    socialCaption: `Evidence from ${p.name}: documented field activity, traceable to source media.`,
-    websiteStory: await createProvider().generateSummary({ project: p }),
-    executiveSummary: `${p.name} — visual evidence summary.`,
-    presentationSummary: `${p.name}: project evidence and gaps.`,
-  };
+  const evidence = await evidenceDigest(p, u);
+  return createProvider().generateCampaign({ project: p, evidence });
 };
 exports.report = async (id, u) => {
   const r = await Report.findById(id);
@@ -455,7 +788,12 @@ exports.reportByProject = async (id, u, q) => {
   await project(id, u);
   const { page, limit, skip } = pageOf(q);
   const [items, total] = await Promise.all([
-    Report.find({ projectId: id }).skip(skip).limit(limit).lean(),
+    Report.find({ projectId: id })
+      .sort({ createdAt: -1 })
+      .select('-content.mediaGallery -content.traceability -content.evidenceReferences')
+      .skip(skip)
+      .limit(limit)
+      .lean(),
     Report.countDocuments({ projectId: id }),
   ]);
   return { items, total, page, limit };
@@ -469,6 +807,9 @@ exports.publish = async (id, u) => {
 function publicValue(value) {
   if (Array.isArray(value)) return value.map(publicValue);
   if (!value || typeof value !== 'object') return value;
+  // Dates and ObjectIds are leaf values; walking their keys would turn them into {}.
+  if (value instanceof Date) return value;
+  if (value._bsontype === 'ObjectId' || value._bsontype === 'ObjectID') return String(value);
   const out = {};
   for (const [key, item] of Object.entries(value))
     if (!['_id', 'id', 'generatedBy', 'userEmail', 'email', 'publicSlug'].includes(key))
@@ -494,34 +835,16 @@ exports.publicReport = async (slug) => {
 };
 exports.pdf = async (id, u) => {
   const r = await exports.report(id, u);
-  const PDFDocument = require('pdfkit');
-  return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 48 });
-    const chunks = [];
-    doc.on('data', (chunk) => chunks.push(chunk));
-    doc.on('end', () =>
-      resolve({ contentType: 'application/pdf', content: Buffer.concat(chunks) }),
-    );
-    doc.on('error', reject);
-    doc.fontSize(22).text(r.title || 'Impact Evidence Report');
-    doc.moveDown();
-    doc
-      .fontSize(10)
-      .text('AI-generated visual evidence summary. Verify against original project records.');
-    doc.moveDown();
-    doc.fontSize(12).text(JSON.stringify(r.content, null, 2), { lineGap: 4 });
-    doc.end();
-  });
+  return require('./report/pdf.service').renderReportPdf(r);
 };
-exports.health = () => ({
-  status: 'ok',
-  database: require('mongoose').connection.readyState === 1 ? 'connected' : 'disconnected',
-  cloudinary:
-    config.cloudinary.mode === 'mock' ||
-    !config.cloudinary.cloudName ||
-    !config.cloudinary.apiKey ||
-    !config.cloudinary.apiSecret
-      ? 'demo-mode'
-      : 'configured',
-  aiProvider: config.aiProvider,
-});
+exports.health = () => {
+  const cloudinary = cloud.getCloudinaryStatus ? cloud.getCloudinaryStatus() : 'demo-mode';
+  return {
+    status: 'ok',
+    database: require('mongoose').connection.readyState === 1 ? 'connected' : 'disconnected',
+    // configured | misconfigured (credentials rejected, local fallback) | demo-mode (not set up)
+    cloudinary,
+    storage: cloud.cloudinaryReady && cloud.cloudinaryReady() ? 'cloudinary' : 'local',
+    aiProvider: config.aiProvider,
+  };
+};

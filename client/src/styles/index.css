@@ -1,0 +1,254 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* Map DESIGN.md tokens onto Tailwind utilities (bg-surface, text-ink-2, border-line, …). */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-surface-hover: var(--surface-hover);
+  --color-sunken: var(--surface-sunken);
+  --color-line: var(--border);
+  --color-line-hover: var(--border-hover);
+  --color-line-strong: var(--border-strong);
+  --color-ink: var(--text);
+  --color-ink-2: var(--text-secondary);
+  --color-ink-3: var(--text-tertiary);
+  --color-inverse: var(--text-inverse);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-hover: var(--accent-soft-hover);
+  --color-focus: var(--focus-ring);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-error: var(--error);
+  --color-error-soft: var(--error-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-observed: var(--observed);
+  --color-observed-soft: var(--observed-soft);
+  --color-inferred: var(--inferred);
+  --color-inferred-soft: var(--inferred-soft);
+  --color-claimed: var(--claimed);
+  --color-claimed-soft: var(--claimed-soft);
+  --color-viz-1: var(--viz-1);
+  --color-viz-2: var(--viz-2);
+  --color-viz-3: var(--viz-3);
+  --color-viz-4: var(--viz-4);
+  --color-viz-5: var(--viz-5);
+  --color-viz-6: var(--viz-6);
+  --color-scrim: var(--scrim);
+  --color-on-media: var(--on-media);
+  --color-media-glass: var(--media-glass);
+
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  --ease-brand: var(--ease);
+  --ease-brand-out: var(--ease-out);
+
+  --text-label: 0.6875rem;
+  --text-label--line-height: 1.3;
+  --text-meta: 0.8125rem;
+  --text-meta--line-height: 1.45;
+
+  --animate-fade-up: fade-up var(--dur-slow) var(--ease-out) both;
+  --animate-shimmer: shimmer 1.4s var(--ease) infinite;
+  --animate-pulse-dot: pulse-dot 1.6s var(--ease) infinite;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+@keyframes drawer-in {
+  from {
+    opacity: 0.6;
+    transform: translateX(32px);
+  }
+}
+@keyframes hero-settle {
+  from {
+    transform: scale(1.04);
+  }
+}
+@keyframes mask-reveal {
+  from {
+    clip-path: inset(0 0 100% 0);
+    transform: translateY(12px);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    transform: none;
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100dvh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    line-height: 1.55;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    color: var(--text);
+    margin: 0;
+  }
+  button,
+  [role='button'] {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: rgba(var(--accent-rgb), 0.2);
+  }
+  img {
+    max-width: 100%;
+  }
+  /* Grid children may shrink below their min-content width, so long nowrap text truncates instead of overflowing. */
+  :where(.grid) > * {
+    min-width: 0;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--surface-alt) 0%,
+      var(--surface-hover) 50%,
+      var(--surface-alt) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s var(--ease) infinite;
+  }
+  .enter-stagger > * {
+    animation: fade-up var(--dur-slow) var(--ease-out) both;
+  }
+  .enter-stagger > *:nth-child(2) {
+    animation-delay: 30ms;
+  }
+  .enter-stagger > *:nth-child(3) {
+    animation-delay: 60ms;
+  }
+  .enter-stagger > *:nth-child(4) {
+    animation-delay: 90ms;
+  }
+  .enter-stagger > *:nth-child(n + 5) {
+    animation-delay: 120ms;
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-hover) transparent;
+  }
+}
+
+/* Coarse pointers get 44px touch targets (DESIGN.md §9). */
+@media (pointer: coarse) {
+  .touch-target {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Leaflet: keep map chrome on-token. */
+.leaflet-container {
+  font-family: var(--font-body);
+  background: var(--surface-alt);
+  border-radius: var(--radius-lg);
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

@@ -13,6 +13,8 @@ jest.mock('../services/cloudinary/upload.service', () => ({
     height: 1,
   }),
   destroy: async () => {},
+  localPathFor: () => null,
+  cloudinaryReady: () => false,
 }));
 jest.mock('../services/ai/providerFactory', () => ({
   createProvider: () => ({
@@ -40,6 +42,12 @@ jest.mock('../services/ai/providerFactory', () => ({
       confidence: 0.7,
     }),
     generateSummary: async () => 'A test impact story.',
+    generateCampaign: async ({ project }) => ({
+      socialCaption: `Caption for ${project.name}`,
+      websiteStory: 'Story',
+      executiveSummary: 'Summary',
+      presentationSummary: 'Slides',
+    }),
     understandQuery: async () => ({ keywords: [] }),
   }),
 }));
@@ -209,6 +217,42 @@ describe('ImpactLens API integration', () => {
       .expect(200);
     expect(dash.body.data.totalMedia).toBe(2);
   });
+  test('media list exposes delivery URLs and search ranks beyond the first page', async () => {
+    const list = await request(app)
+      .get('/api/media')
+      .query({ projectId, limit: 1 })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(list.body.data.items[0].thumbnailUrl).toBeTruthy();
+    expect(list.body.data.items[0].secureUrl).toBeUndefined();
+    const found = await request(app)
+      .get('/api/search')
+      .query({ q: 'show evidence of plantation', projectId, limit: 1, page: 2 })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(found.body.data.total).toBe(2);
+    expect(found.body.data.items).toHaveLength(1);
+    expect(found.body.data.queryUnderstanding.keywords).toEqual(['plantation']);
+    const none = await request(app)
+      .get('/api/search')
+      .query({ q: 'volcano', projectId })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(none.body.data.total).toBe(0);
+    await request(app)
+      .get('/api/search')
+      .query({ q: 'plant(ation', projectId, activity: '((' })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+  });
+  test('comparisons are returned with media cards', async () => {
+    const r = await request(app)
+      .get(`/api/projects/${projectId}/comparisons`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(r.body.data[0].before.thumbnailUrl).toBeTruthy();
+    expect(r.body.data[0].after._id).toBeTruthy();
+  });
   test('insight trace and report publish expose sanitized public data', async () => {
     await request(app)
       .post(`/api/projects/${projectId}/insights/generate`)
@@ -242,7 +286,43 @@ describe('ImpactLens API integration', () => {
       .get(`/api/reports/public/${pub.body.data.publicSlug}`)
       .expect(200);
     expect(JSON.stringify(publicReport.body)).not.toContain('generatedBy');
+    const traced = publicReport.body.data.content.traceability[0];
+    expect(typeof traced.analyzedAt).toBe('string');
+    expect(Number.isNaN(Date.parse(traced.analyzedAt))).toBe(false);
   }, 20000);
+  test('browser session cookie authenticates reads and CSRF-guards writes', async () => {
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'admin@test.local', password: 'StrongPass123' })
+      .expect(200);
+    const cookie = login.headers['set-cookie'].find((c) => c.startsWith('token='));
+    expect(cookie).toMatch(/HttpOnly/i);
+    await request(app).get('/api/auth/me').set('Cookie', cookie).expect(200);
+    await request(app)
+      .post('/api/projects')
+      .set('Cookie', cookie)
+      .send({ name: 'CSRF attempt', organization: 'Demo NGO' })
+      .expect(403);
+    await request(app)
+      .post('/api/projects')
+      .set('Cookie', cookie)
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .send({ name: 'Cookie project', organization: 'Demo NGO' })
+      .expect(201);
+    const out = await request(app)
+      .post('/api/auth/logout')
+      .set('Cookie', cookie)
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .expect(200);
+    expect(out.headers['set-cookie'][0]).toMatch(/token=;/);
+  });
+  test('successful logins do not consume the auth limiter', async () => {
+    for (let i = 0; i < 22; i++)
+      await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'admin@test.local', password: 'StrongPass123' })
+        .expect(200);
+  }, 30000);
   test('auth limiter rejects repeated attempts', async () => {
     let response;
     for (let i = 0; i < 25; i++)

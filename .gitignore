@@ -25,6 +25,14 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Client test artifacts
+client/e2e/.auth/
+client/test-results/
+client/playwright-report/
+
 # Misc
 coverage/
 *.pem
+
+# Local media fallback storage
+server/uploads/

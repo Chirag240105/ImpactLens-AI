@@ -4,7 +4,9 @@ services:
     restart: unless-stopped
     volumes: ["impactlens-mongo:/data/db"]
   server:
-    build: .
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
     ports: ["5000:5000"]
     environment:
       NODE_ENV: development

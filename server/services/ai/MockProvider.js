@@ -36,6 +36,14 @@ class MockProvider extends AIProvider {
   async generateSummary({ project }) {
     return `Impact story for ${project.name}, grounded in uploaded visual evidence.`;
   }
+  async generateCampaign({ project }) {
+    return {
+      socialCaption: `Evidence from ${project.name}: documented field activity, traceable to source media.`,
+      websiteStory: `Impact story for ${project.name}, grounded in uploaded visual evidence.`,
+      executiveSummary: `${project.name} — visual evidence summary.`,
+      presentationSummary: `${project.name}: project evidence and gaps.`,
+    };
+  }
   async generateReport({ project, sections = [] }) {
     return { title: `${project.name} impact evidence`, sections };
   }

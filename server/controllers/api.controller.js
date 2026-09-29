@@ -2,12 +2,24 @@ const svc = require('../services/api.service');
 const { ok } = require('../utils/response');
 const ApiError = require('../utils/ApiError');
 const c = {};
-c.register = async (req, res) => ok(res, await svc.register(req.body), {}, 201);
-c.login = async (req, res) => ok(res, await svc.login(req.body));
+const { config } = require('../config/env');
+// Browser sessions use an httpOnly cookie so the JWT never touches JS-readable storage.
+const cookieOptions = () => ({
+  httpOnly: true,
+  sameSite: config.cookieSameSite,
+  secure: config.cookieSameSite === 'none' || config.nodeEnv === 'production',
+  path: '/',
+});
+const withSession = (res, data, status = 200) => {
+  res.cookie('token', data.token, { ...cookieOptions(), maxAge: config.sessionMaxAgeMs });
+  return ok(res, data, {}, status);
+};
+c.register = async (req, res) => withSession(res, await svc.register(req.body), 201);
+c.login = async (req, res) => withSession(res, await svc.login(req.body));
 c.me = (req, res) =>
   ok(res, { id: req.user._id, name: req.user.name, email: req.user.email, role: req.user.role });
 c.logout = (req, res) => {
-  res.clearCookie('token');
+  res.clearCookie('token', cookieOptions());
   return ok(res, { loggedOut: true });
 };
 c.projects = async (req, res) => ok(res, await svc.listProjects(req.user, req.query));
@@ -51,7 +63,7 @@ c.publish = async (req, res) => {
   const r = await svc.publish(req.params.id, req.user);
   return ok(res, {
     ...r.toObject(),
-    publicUrl: `${require('../config/env').config.publicReportBaseUrl}/${r.publicSlug}`,
+    publicUrl: `${config.publicReportBaseUrl}/${r.publicSlug}`,
   });
 };
 c.publicReport = async (req, res) => {
@@ -60,6 +72,7 @@ c.publicReport = async (req, res) => {
 };
 c.pdf = async (req, res) => {
   const out = await svc.pdf(req.params.id, req.user);
+  res.set('Content-Disposition', `attachment; filename="impactlens-report-${req.params.id}.pdf"`);
   res.type(out.contentType).send(out.content);
 };
 c.health = (req, res) => ok(res, svc.health());
