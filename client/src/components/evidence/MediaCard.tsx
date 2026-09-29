@@ -3,6 +3,8 @@ import type { MediaAsset } from '@/api/types';
 import { cn, formatDate } from '@/lib/utils';
 import { MediaThumb } from './MediaThumb';
 import { ConfidenceBadge, EvidenceTypeBadge, PlaceLabel, ProcessingBadge } from './Badges';
+import { IntegrityBadge } from './Integrity';
+import { needsReview } from '@/lib/integrity';
 
 /** Evidence grid card: large media first, then AI tags with confidence and provenance. */
 export function MediaCard({
@@ -28,6 +30,7 @@ export function MediaCard({
         alt={title}
         filename={asset.originalFilename}
         isVideo={asset.resourceType === 'video'}
+        videoSrc={asset.resourceType === 'video' ? asset.previewUrl : undefined}
         className="aspect-[3/2]"
         imgClassName="group-hover:scale-[1.03] transition-transform duration-[var(--dur-slow)] ease-brand"
       />
@@ -37,6 +40,11 @@ export function MediaCard({
           <ProcessingBadge status={asset.processingStatus} error={asset.processingError} />
         )}
       </div>
+      {needsReview(asset.integrity) && (
+        <div className="absolute top-2 right-2 z-10">
+          <IntegrityBadge integrity={asset.integrity} />
+        </div>
+      )}
       <div className="flex flex-1 flex-col gap-2 p-3">
         <h3 className="line-clamp-2 font-sans text-meta leading-snug font-semibold">
           {/* Stretched button makes the whole card one accessible target. */}
@@ -52,6 +60,8 @@ export function MediaCard({
           {top && <ConfidenceBadge value={top.confidence} label={top.name} />}
           {asset.matchedTerms?.length ? (
             <span className="text-label text-ink-3">matched: {asset.matchedTerms.join(', ')}</span>
+          ) : asset.semanticScore !== undefined ? (
+            <span className="text-label text-ink-3">related by meaning</span>
           ) : null}
         </div>
         <div className="mt-auto flex items-center justify-between gap-2 pt-1">

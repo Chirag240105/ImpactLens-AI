@@ -4,7 +4,7 @@
 
 ImpactLens helps NGOs, governments, and sustainability teams organize project photos and videos into searchable evidence, track what is documented, and generate reports that link observations to source media.
 
-Features: JWT auth and project roles; project/media metadata; Cloudinary adapter; offline mock analysis; async processing; keyword search; timeline, locations and coverage; before/after comparison; insight traces; report/story/campaign endpoints; public report DTOs.
+Features: JWT auth and project roles; project/media metadata; Cloudinary adapter with local fallback; Gemini image and video analysis (offline mock available); async processing; semantic + keyword search; evidence integrity checks (duplicates, metadata, dates, distance); UN SDG alignment; timeline, locations and coverage; before/after comparison; insight traces; report/story/campaign endpoints; public report DTOs.
 
 ## Backend status dashboard
 
@@ -23,6 +23,7 @@ Features: JWT auth and project roles; project/media metadata; Cloudinary adapter
 | Seed / smoke | ✅ Done | `npm run seed:real` imports 28 openly licensed Wikimedia Commons field photos (real dates, locations, attribution) and analyzes them; `npm run seed` stays the synthetic test fixture. |
 | Tests / CI | 🟡 Partial | Nine API tests, coverage, lint, and full mock-mode smoke pass; real provider smoke remains. |
 | Docs / deployment | 🟡 Partial | API, OpenAPI, collection, architecture and deployment docs; production behavior unverified. |
+| Integrity / SDG / semantic search | ✅ Done | Duplicate and metadata integrity checks with per-project scores, UN SDG alignment, Gemini-embedding semantic search and native video analysis. |
 | Frontend (client) | ✅ Done | React 18 + TypeScript + Tailwind v4 SPA covering the full judge flow; design system in [DESIGN.md](DESIGN.md); Vitest, Playwright E2E and axe checks. See [client/README.md](client/README.md). |
 
 ## Architecture diagrams

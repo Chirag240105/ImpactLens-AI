@@ -74,3 +74,18 @@ export const ACCEPTED_MEDIA = {
 } as const;
 export const MAX_UPLOAD_FILES = 20;
 export const MAX_UPLOAD_MB = Number(import.meta.env.VITE_MAX_UPLOAD_MB) || 50;
+
+export const INTEGRITY_FLAG_LABEL: Record<string, string> = {
+  DUPLICATE_EXACT: 'Exact duplicate',
+  NEAR_DUPLICATE: 'Near-duplicate',
+  NO_CAMERA_METADATA: 'No camera metadata',
+  EDITED: 'Edited in software',
+  FUTURE_DATE: 'Future capture date',
+  BEFORE_PROJECT: 'Before project start',
+  AFTER_PROJECT: 'After project end',
+  NO_CAPTURE_DATE: 'No capture date',
+  FAR_FROM_SITE: 'Far from project site',
+  NO_LOCATION: 'No location',
+  LOCATION_AI_ONLY: 'AI-estimated location',
+  NOT_FIELD_EVIDENCE: 'Not field evidence',
+};

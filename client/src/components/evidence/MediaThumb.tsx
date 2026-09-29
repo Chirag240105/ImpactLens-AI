@@ -14,6 +14,7 @@ export function MediaThumb({
   className,
   imgClassName,
   eager,
+  videoSrc,
 }: {
   src?: string;
   alt: string;
@@ -22,13 +23,24 @@ export function MediaThumb({
   className?: string;
   imgClassName?: string;
   eager?: boolean;
+  /** For videos without a poster image: the browser renders the clip's first frame instead. */
+  videoSrc?: string;
 }) {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const showImage = src && !failed;
   return (
     <div className={cn('relative overflow-hidden bg-surface-alt', className)}>
-      {showImage ? (
+      {!showImage && isVideo && videoSrc ? (
+        <video
+          src={`${videoSrc}#t=0.5`}
+          muted
+          playsInline
+          preload="metadata"
+          aria-label={alt}
+          className={cn('size-full object-cover', imgClassName)}
+        />
+      ) : showImage ? (
         <>
           {!loaded && <div aria-hidden className="skeleton absolute inset-0" />}
           <img

@@ -25,6 +25,9 @@ import { EmptyState, ErrorState, InlineAlert, Skeleton } from '@/components/ui/F
 import { Badge } from '@/components/ui/Badge';
 import { BarList, CoverageRing, StatCard } from '@/components/charts';
 import { AiLabel, ProjectStatusBadge } from '@/components/evidence/Badges';
+import { scoreTone } from '@/lib/integrity';
+import { SdgList } from '@/components/Sdg';
+import { INTEGRITY_FLAG_LABEL } from '@/lib/constants';
 import { MediaThumb } from '@/components/evidence/MediaThumb';
 
 function ProcessingProgress({ projectId }: { projectId: string }) {
@@ -212,6 +215,49 @@ export default function ProjectOverviewPage() {
               </CardBody>
             </Card>
           </div>
+
+          {d.integrity && d.integrity.score !== null && (
+            <Card className="mt-4">
+              <CardHeader
+                eyebrow="Anti-greenwashing"
+                title="Evidence integrity"
+                description="Duplicate, metadata, date and location checks across all evidence."
+                action={
+                  <Link to="integrity" className="inline-flex items-center gap-1 text-meta font-semibold text-accent hover:underline">
+                    Review flags <ArrowRight className="size-4" aria-hidden />
+                  </Link>
+                }
+              />
+              <CardBody className="flex flex-wrap items-center gap-x-8 gap-y-4">
+                <div className="flex items-center gap-3">
+                  <CoverageRing percent={d.integrity.score} size={72} stroke={8} label="Integrity score" />
+                  <div className="text-meta">
+                    <Badge tone={scoreTone(d.integrity.score)}>{d.integrity.reviewNeeded ? `${d.integrity.reviewNeeded} to review` : 'No major issues'}</Badge>
+                    <p className="mt-1 text-ink-3">{d.integrity.clean} of {d.integrity.assetsChecked} assets have no flags</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(d.integrity.byFlag)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 6)
+                    .map(([code, n]) => (
+                      <Badge key={code}>{INTEGRITY_FLAG_LABEL[code] || code} · {n}</Badge>
+                    ))}
+                </div>
+              </CardBody>
+            </Card>
+          )}
+
+          <Card className="mt-4">
+            <CardHeader
+              eyebrow="UN Sustainable Development Goals"
+              title="SDG alignment"
+              description="Goals the analyzed evidence shows related activity for. Alignment is not a measured contribution."
+            />
+            <CardBody>
+              <SdgList items={d.sdgs} />
+            </CardBody>
+          </Card>
 
           <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>

@@ -73,6 +73,7 @@ export default function EvidencePage() {
   const idx = items.findIndex((i) => i._id === openId);
   const activeFilters = FILTER_KEYS.filter((k) => params.get(k));
   const keywords = query.data?.queryUnderstanding?.keywords;
+  const semantic = query.data?.queryUnderstanding?.mode === 'semantic';
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -176,7 +177,9 @@ export default function EvidencePage() {
         {keywords?.length ? (
           <span className="inline-flex items-center gap-1.5" aria-live="polite">
             <Sparkles className="size-3.5 text-inferred" aria-hidden />
-            Matching {keywords.map((k) => <b key={k} className="rounded bg-inferred-soft px-1.5 py-0.5 font-semibold text-inferred">{k}</b>)} across tags, descriptions, activities and places
+            {semantic ? 'Ranked by meaning (AI embeddings), boosted by' : 'Matching'}{' '}
+            {keywords.map((k) => <b key={k} className="rounded bg-inferred-soft px-1.5 py-0.5 font-semibold text-inferred">{k}</b>)}{' '}
+            {semantic ? 'keyword matches' : 'across tags, descriptions, activities and places'}
           </span>
         ) : (
           <>
@@ -313,6 +316,7 @@ export default function EvidencePage() {
         onClose={() => setParam({ media: null, page: String(page) })}
         onPrev={idx > 0 ? () => setParam({ media: items[idx - 1]._id, page: String(page) }) : undefined}
         onNext={idx >= 0 && idx < items.length - 1 ? () => setParam({ media: items[idx + 1]._id, page: String(page) }) : undefined}
+        onOpenMedia={(id) => setParam({ media: id, page: String(page) })}
       />
       <UploadDialog open={params.get('upload') === '1'} onOpenChange={(o) => setParam({ upload: o ? '1' : null, page: String(page) })} projectId={projectId} />
     </>

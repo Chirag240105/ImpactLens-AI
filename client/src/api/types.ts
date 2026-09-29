@@ -72,6 +72,39 @@ export type ProjectInput = Partial<
   >
 >;
 
+export type IntegritySeverity = 'high' | 'medium' | 'low';
+export interface IntegrityFlag {
+  code: string;
+  severity: IntegritySeverity;
+  message: string;
+  relatedMediaId?: string;
+}
+export interface AssetIntegrity {
+  score: number;
+  flags: IntegrityFlag[];
+}
+export interface IntegritySummary {
+  score: number | null;
+  assetsChecked: number;
+  clean: number;
+  reviewNeeded: number;
+  byFlag: Record<string, number>;
+  siteRadiusKm: number | null;
+  checkedAt: string;
+}
+export interface IntegrityReport extends IntegritySummary {
+  assets: Array<MediaCardRef & { integrity: AssetIntegrity }>;
+}
+
+export interface SdgAlignment {
+  goal: number;
+  name: string;
+  assets: number;
+  share: number;
+  topTerms: string[];
+  sampleMediaIds?: string[];
+}
+
 export interface Scored {
   name: string;
   confidence: number;
@@ -111,10 +144,15 @@ export interface MediaAsset {
   attempts?: number;
   analysis?: { model?: string; provider?: string; version?: string; analyzedAt?: string };
   storage?: 'cloudinary' | 'local' | 'external';
+  integrity?: AssetIntegrity;
+  sdgs?: Array<{ goal: number; name: string; matched: string[] }>;
+  frameUrls?: string[];
+  camera?: { hasExif?: boolean; make?: string; model?: string; software?: string };
   attribution?: { source?: string; title?: string; url?: string; author?: string; license?: string; licenseUrl?: string };
   createdAt: string;
   updatedAt: string;
   searchScore?: number;
+  semanticScore?: number;
   matchedTerms?: string[];
 }
 /** Compact media reference embedded in pairs, comparisons and timeline highlights. */
@@ -150,7 +188,7 @@ export interface MediaFilters {
   limit?: number;
 }
 export interface SearchResult extends Page<MediaAsset> {
-  queryUnderstanding: { keywords: string[]; provider: string };
+  queryUnderstanding: { keywords: string[]; provider: string; mode?: 'semantic' | 'keyword' };
 }
 export interface MediaUpdate {
   evidenceType?: EvidenceType;
@@ -177,6 +215,8 @@ export interface ProjectDashboard {
   beforeAfterPairs: number;
   evidenceCoverage: Coverage;
   environmentalSignals: string[];
+  integrity?: IntegritySummary;
+  sdgs?: SdgAlignment[];
 }
 export type ProcessingCounts = Array<{ _id: ProcessingStatus; count: number }>;
 
@@ -320,6 +360,15 @@ export interface ReportContent {
   }>;
   evidenceReferences?: Array<{ id: string; cloudinaryPublicId?: string; model?: string; timestamp?: string }>;
   evidenceGaps: Gap[];
+  sdgs?: SdgAlignment[];
+  integrity?: {
+    score: number | null;
+    assetsChecked: number;
+    clean: number;
+    reviewNeeded: number;
+    byFlag: Record<string, number>;
+    flagged: Array<{ asset?: string; score: number; flags: string[] }>;
+  };
   methodology: string;
   traceability: Array<{ assetId?: string; publicId?: string; model?: string; analyzedAt?: string }>;
   disclaimer: string;

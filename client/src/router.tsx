@@ -16,6 +16,7 @@ const TimelinePage = lazy(() => import('@/pages/projects/TimelinePage'));
 const LocationsPage = lazy(() => import('@/pages/projects/LocationsPage'));
 const ComparePage = lazy(() => import('@/pages/projects/ComparePage'));
 const InsightsPage = lazy(() => import('@/pages/projects/InsightsPage'));
+const IntegrityPage = lazy(() => import('@/pages/projects/IntegrityPage'));
 const ReportsPage = lazy(() => import('@/pages/projects/ReportsPage'));
 const ReportViewPage = lazy(() => import('@/pages/projects/ReportViewPage'));
 const ProjectSettingsPage = lazy(() => import('@/pages/projects/ProjectSettingsPage'));
@@ -55,6 +56,7 @@ export const router = createBrowserRouter([
               { path: 'locations', element: page(<LocationsPage />) },
               { path: 'compare', element: page(<ComparePage />) },
               { path: 'insights', element: page(<InsightsPage />) },
+              { path: 'integrity', element: page(<IntegrityPage />) },
               { path: 'reports', element: page(<ReportsPage />) },
               { path: 'reports/:reportId', element: page(<ReportViewPage />) },
               { path: 'settings', element: page(<ProjectSettingsPage />) },

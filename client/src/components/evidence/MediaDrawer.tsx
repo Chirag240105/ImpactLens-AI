@@ -16,6 +16,8 @@ import { ErrorState, InlineAlert, Skeleton } from '@/components/ui/Feedback';
 import { Meter, MonoId, Tooltip } from '@/components/ui/Misc';
 import { AiLabel, ConfidenceBadge, EvidenceTypeBadge, LocationSourceBadge, ProcessingBadge, TrustKindBadge } from './Badges';
 import { MediaThumb } from './MediaThumb';
+import { IntegrityBadge, IntegrityFlags } from './Integrity';
+import { SdgChip } from '@/components/Sdg';
 
 function Section({ title, children, aside }: { title: ReactNode; children: ReactNode; aside?: ReactNode }) {
   return (
@@ -146,12 +148,15 @@ export function MediaDrawer({
   canWrite,
   onPrev,
   onNext,
+  onOpenMedia,
 }: {
   mediaId: string | null;
   onClose: () => void;
   canWrite: boolean;
   onPrev?: () => void;
   onNext?: () => void;
+  /** Opens another asset in place (e.g. the duplicate an integrity flag points to). */
+  onOpenMedia?: (id: string) => void;
 }) {
   const query = useQuery({ ...q.mediaDetail(mediaId || ''), enabled: Boolean(mediaId) });
   const a = query.data;
@@ -223,11 +228,19 @@ export function MediaDrawer({
               <MediaThumb src={src} alt={a.aiDescription || a.originalFilename || 'Evidence'} filename={a.originalFilename} className="max-h-[50vh] min-h-56" imgClassName="max-h-[50vh] object-contain" eager />
             )}
           </div>
+          {!!a.frameUrls?.length && (
+            <div className="grid grid-cols-3 gap-1 bg-surface-alt px-1 pb-1" aria-label="Key frames at 10%, 50% and 90% of the video">
+              {a.frameUrls.map((f, i) => (
+                <MediaThumb key={f} src={f} alt={`Frame at ${['10%', '50%', '90%'][i]}`} className="aspect-video rounded" />
+              ))}
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-1.5 px-5 pt-4">
             <ProcessingBadge status={a.processingStatus} error={a.processingError} />
             <EvidenceTypeBadge type={a.evidenceType} />
             <LocationSourceBadge source={a.location?.source} place={a.location?.name} />
             <ConfidenceBadge value={a.aiConfidence} />
+            <IntegrityBadge integrity={a.integrity} />
           </div>
 
           {a.processingStatus === 'FAILED' && (
@@ -295,6 +308,15 @@ export function MediaDrawer({
               <Section title="Environmental signals">
                 <ScoreList items={a.environmentalSignals} empty="No environmental signals detected." />
               </Section>
+              {!!a.sdgs?.length && (
+                <Section title="Aligned UN SDGs">
+                  <div className="flex flex-wrap gap-1.5">
+                    {a.sdgs.map((g) => (
+                      <SdgChip key={g.goal} goal={g.goal} name={g.name} detail={`matched: ${g.matched.join(', ')}`} />
+                    ))}
+                  </div>
+                </Section>
+              )}
               {!!a.tags?.length && (
                 <Section title="Tags">
                   <div className="flex flex-wrap gap-1.5">
@@ -306,6 +328,10 @@ export function MediaDrawer({
               )}
             </>
           )}
+
+          <Section title="Integrity checks" aside={<span className="text-label text-ink-3">Signals for review, not verdicts</span>}>
+            <IntegrityFlags integrity={a.integrity} onOpenRelated={onOpenMedia} />
+          </Section>
 
           <Section title="Provenance">
             <dl>
