@@ -1,351 +1,227 @@
+<div align="center">
+
 # ImpactLens AI
 
-**Raw field media → AI understanding → evidence search → comparison → traceable impact reports.**
+**Turn raw field photos and videos into searchable, verifiable impact evidence.**
 
-ImpactLens helps NGOs, governments, and sustainability teams organize project photos and videos into searchable evidence, track what is documented, and generate reports that link observations to source media.
+ImpactLens helps NGOs, CSR teams and public agencies organise project media, understand it with AI, check it for integrity, and publish impact reports where every claim links back to its source.
 
-Features: JWT auth and project roles; project/media metadata; Cloudinary adapter with local fallback; Gemini image and video analysis (offline mock available); async processing; semantic + keyword search; evidence integrity checks (duplicates, metadata, dates, distance); UN SDG alignment; timeline, locations and coverage; before/after comparison; insight traces; report/story/campaign endpoints; public report DTOs.
+![Node](https://img.shields.io/badge/Node-20+-339933?logo=node.js&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose_8-47A248?logo=mongodb&logoColor=white)
+![Gemini](https://img.shields.io/badge/Google-Gemini-8E75B2?logo=googlegemini&logoColor=white)
+![Cloudinary](https://img.shields.io/badge/Cloudinary-media-3448C5?logo=cloudinary&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-267953)
 
-## Backend status dashboard
+<img src="docs/screenshots/overview.jpg" alt="ImpactLens project overview with KPIs, evidence coverage and integrity score" width="100%" />
 
-| Module | Status | Note |
-|---|---|---|
-| Config, security, logging | 🟡 Partial | Typed env config, CORS, helmet, rate limit and request IDs; log integration and full hardening need review. |
-| Mongo models | ✅ Done | Six timestamped schemas and core indexes. |
-| Auth and RBAC | 🟡 Partial | JWT/register/login and owner checks; open registration and organization membership are demo-level. |
-| Projects | ✅ Done | CRUD, paging, archiving and access check. |
-| Media / Cloudinary | 🟡 Partial | Cloudinary upload with EXIF + perceptual hash, smart-crop (`g_auto`) thumbnails, video frame URLs and before/after composites; startup credential check with a local-disk fallback. Real Cloudinary uploads still need a valid cloud name to verify. |
-| Queue / AI | ✅ Done | Gemini vision with schema-constrained JSON (observed vs inferred, calibrated confidence), two-image comparison, evidence-grounded story/campaign; retries and model fallback. The in-process queue is not multi-replica durable. |
-| Search | 🟡 Partial | Mongo keyword filtering; no semantic ranking or vector search. |
-| Analysis / insight | 🟡 Partial | Timeline, coverage, heuristic pairs, mocked comparison and evidence trace. |
-| Dashboard | 🟡 Partial | Aggregation-backed project KPIs; broader analytics/cache work remains. |
-| Reports / PDF | 🟡 Partial | Structured reports, story/campaign, simple PDFKit export, sanitized public fetch; visual polish remains. |
-| Seed / smoke | ✅ Done | `npm run seed:real` imports 28 openly licensed Wikimedia Commons field photos (real dates, locations, attribution) and analyzes them; `npm run seed` stays the synthetic test fixture. |
-| Tests / CI | 🟡 Partial | Nine API tests, coverage, lint, and full mock-mode smoke pass; real provider smoke remains. |
-| Docs / deployment | 🟡 Partial | API, OpenAPI, collection, architecture and deployment docs; production behavior unverified. |
-| Integrity / SDG / semantic search | ✅ Done | Duplicate and metadata integrity checks with per-project scores, UN SDG alignment, Gemini-embedding semantic search and native video analysis. |
-| Frontend (client) | ✅ Done | React 18 + TypeScript + Tailwind v4 SPA covering the full judge flow; design system in [DESIGN.md](DESIGN.md); Vitest, Playwright E2E and axe checks. See [client/README.md](client/README.md). |
+</div>
 
-## Architecture diagrams
+## Why ImpactLens
 
-### System architecture
+Impact teams collect thousands of field photos, but they end up scattered across phones and shared drives with no context. When it's time to report, someone scrolls for hours and picks the best-looking pictures. No one can say what was actually documented, what is missing, or whether a photo was reused from another project.
 
-```mermaid
-flowchart LR
-  React[React client] --> Express[Express API]
-  Express --> Mongo[(MongoDB)]
-  Express --> Cloud[Cloudinary]
-  Express --> Queue[Background queue]
-  Queue --> AI[AI provider]
-  AI --> Vendors[Gemini Groq OpenAI Mock]
-  Queue --> Mongo
-```
+ImpactLens treats every photo and video as **evidence**:
 
-Caption: The API persists metadata and dispatches media analysis to a replaceable provider.
+1. **Understand.** Gemini describes each asset and separates what it *observed* from what it *inferred*, with calibrated confidence.
+2. **Find.** Search in plain language ("kids helping with saplings") using semantic embeddings, not just file names.
+3. **Verify.** Integrity checks flag reused, edited or out-of-place media before it reaches a report.
+4. **Report.** Reports, PDFs and public share pages trace every statement back to the media that supports it.
 
-### Layered backend
+## Features
 
-```mermaid
-flowchart TD
-  Routes --> Controllers
-  Controllers --> Services
-  Services --> Models
-  Services --> Providers[External adapters]
-  Middleware --> Controllers
-```
+| | |
+|---|---|
+| **AI media analysis**<br>Schema-constrained Gemini output: description, activities, objects, environmental signals and tags, each with its own confidence. Observed and inferred statements are kept apart, and confidence is capped at 95% so it never reads as proof. Videos are analysed as whole clips, with key frames extracted at 10%, 50% and 90% of the clip. | <img src="docs/screenshots/evidence-panel.jpg" alt="Evidence panel showing AI description, confidence and integrity" /> |
+| **Semantic evidence search**<br>Every asset is embedded with `gemini-embedding-001`. Queries are ranked by meaning and blended with keyword matches, and each result shows why it matched. Filters cover evidence type, activity, place, date and confidence. | <img src="docs/screenshots/semantic-search.jpg" alt="Semantic search results for kids helping with saplings" /> |
+| **Before / after comparison**<br>Suggested pairs from the same site, an interactive slider, and an AI-detected change score with observed differences. With Cloudinary, a side-by-side composite image is generated for reports. | <img src="docs/screenshots/before-after.jpg" alt="Before and after slider with AI-detected visual difference" /> |
+| **Integrity review (anti-greenwashing)**<br>A SHA-256 hash and a perceptual dHash catch exact and near-duplicate reuse, including across projects. The checks also flag editing software, missing camera metadata, capture dates outside the project window, and GPS beyond the site radius. Every asset gets a 0–100 score. Flags are signals for human review, not verdicts. | <img src="docs/screenshots/integrity.jpg" alt="Integrity review with score, flag types and flagged evidence" /> |
+| **UN SDG alignment**<br>A transparent rules table maps AI-detected activities and signals to the Sustainable Development Goals and records the matched terms. The results are worded as alignment, never as a measured contribution. | <img src="docs/screenshots/sdg-alignment.jpg" alt="SDG alignment bars with matched terms" /> |
+| **Timeline, map and coverage**<br>Evidence is grouped by month and plotted on a map. Each location is labelled by how it's known: GPS-verified, user-provided or AI-estimated. Coverage tracks the expected evidence categories and suggests what to capture next. | <img src="docs/screenshots/map.jpg" alt="Locations map with location provenance" /> |
+| **Traceable reports**<br>Reports are generated from the evidence database: KPIs, coverage, insights, integrity, SDGs and an AI-written story and campaign copy. They export to PDF, or publish as a sanitised public page with a random share link. | <img src="docs/screenshots/public-report.jpg" alt="Published public impact report" /> |
 
-Caption: Request handling stays above business logic, persistence, and SDK adapters.
+Also included: role-based access (admin, project manager, viewer), a `Ctrl+K` command palette, a live capture context on sign-in (device location and local time), and an accessible, responsive UI. Core pages are checked against WCAG 2 A/AA with axe.
 
-### Folder structure
-
-```mermaid
-flowchart TD
-  Repo[ImpactLens-AI] --> Client[client React SPA]
-  Repo --> Server[server]
-  Server --> Config[config]
-  Server --> Models[models]
-  Server --> Routes[routes and controllers]
-  Server --> Services[services and providers]
-  Server --> Jobs[jobs]
-  Repo --> Docs[docs]
-  Repo --> Shared[shared constants]
-```
-
-Caption: Backend modules, docs, and shared enums are separated from the client workspace.
-
-### Upload and analysis sequence
-
-```mermaid
-sequenceDiagram
-  participant U as User
-  participant A as API
-  participant C as Cloudinary
-  participant Q as Queue
-  participant I as AI
-  participant D as MongoDB
-  U->>A: Upload file
-  A->>C: Upload buffer
-  A->>D: Save PENDING asset
-  A->>Q: Enqueue asset id
-  Q->>I: Analyze URL
-  I-->>Q: Metadata
-  Q->>D: Save COMPLETED result
-```
-
-Caption: Analysis runs after the upload response and leaves the source record available on failure.
-
-### Processing states
-
-```mermaid
-stateDiagram-v2
-  [*] --> PENDING
-  PENDING --> PROCESSING
-  PROCESSING --> COMPLETED
-  PROCESSING --> FAILED
-  FAILED --> PENDING: retry
-```
-
-Caption: Failed work can be retried without deleting the media asset.
-
-### Collections
-
-```mermaid
-erDiagram
-  USER ||--o{ PROJECT : creates
-  PROJECT ||--o{ MEDIA_ASSET : contains
-  USER ||--o{ MEDIA_ASSET : uploads
-  PROJECT ||--o{ ANALYSIS : records
-  MEDIA_ASSET }o--o{ ANALYSIS : analyzed
-  PROJECT ||--o{ INSIGHT : surfaces
-  INSIGHT }o--o{ MEDIA_ASSET : traces
-  PROJECT ||--o{ REPORT : documents
-  USER ||--o{ REPORT : generates
-```
-
-Caption: Analyses, insights, and reports reference project evidence for traceability.
-
-### Search flow
+## Architecture
 
 ```mermaid
 flowchart LR
-  Query --> Understand[Keyword understanding]
-  Understand --> Filter[Mongo filters]
-  Filter --> Rank[Text match]
-  Rank --> Page[Paginated results]
+  subgraph Client["React client (Vite)"]
+    UI[Pages and components] --> RQ[TanStack Query]
+  end
+  RQ -->|/api, httpOnly cookie| API[Express API]
+  API --> DB[(MongoDB)]
+  API --> CL[Cloudinary<br/>storage and transforms]
+  API --> Q[Analysis queue]
+  Q --> AI[AI provider<br/>Gemini / OpenAI / Groq / Mock]
+  Q --> INT[Integrity and SDG services]
+  AI --> EMB[Embeddings for semantic search]
+  Q --> DB
+  API --> PDF[PDF and public reports]
 ```
 
-Caption: Search is currently keyword-based; semantic/vector ranking is not enabled.
+**Upload pipeline.** Each upload goes through these steps:
 
-### Before/after comparison
+1. The file signature is checked.
+2. The file is stored in Cloudinary, which returns EXIF and a perceptual hash. It falls back to local disk when Cloudinary isn't configured.
+3. SHA-256, dHash and camera metadata are recorded.
+4. The asset is queued as `PENDING` and analysed by the provider.
+5. Its embedding is stored and it moves to `COMPLETED`.
 
-```mermaid
-flowchart LR
-  Before[Before asset] --> Validate[Same project check]
-  After[After asset] --> Validate
-  Validate --> Compare[Provider comparison]
-  Compare --> Store[Analysis record]
-  Store --> Output[Visual difference and confidence]
+Failures keep the asset, mark it `FAILED` and can be retried. The Gemini provider paces requests, rotates across a model pool, and parks models that hit their daily quota.
+
+More detail: [architecture](docs/architecture.md) · [AI pipeline](docs/ai-pipeline.md) · [API reference](docs/api.md) · [OpenAPI spec](docs/openapi.yaml)
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, TypeScript, Vite 6, Tailwind CSS v4, TanStack Query v5, Zustand, React Router, React Hook Form + Zod, Radix UI, Leaflet |
+| Backend | Node.js 20, Express 4, Mongoose 8, Multer, Sharp, PDFKit, Pino, Helmet |
+| AI | Google Gemini (vision, video, text), `gemini-embedding-001`. OpenAI, OpenRouter and Groq adapters; offline mock provider |
+| Media | Cloudinary (EXIF, phash, `g_auto` thumbnails, video frames, composites) with local-disk fallback |
+| Testing | Jest + mongodb-memory-server, Vitest + Testing Library + MSW, Playwright + axe-core |
+| Deployment | Render (API), Vercel (client), MongoDB Atlas, Docker |
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 20+ and npm
+- MongoDB, either local or [Atlas](https://www.mongodb.com/atlas)
+- Optional: a [Gemini API key](https://aistudio.google.com/apikey) and a [Cloudinary](https://cloudinary.com) account. Without them the app runs in offline mock mode.
+
+### 1. Install
+
+```bash
+git clone https://github.com/Chirag240105/ImpactLens-AI.git
+cd ImpactLens-AI
+npm install            # installs client, server and shared workspaces
+cp .env.example .env   # then edit MONGODB_URI, JWT_SECRET and optional keys
 ```
 
-Caption: Returned differences are model observations, not measured proof of impact.
-
-### Evidence trace
-
-```mermaid
-flowchart LR
-  Claim[Insight statement] --> Evidence[Source media]
-  Evidence --> Original[Cloudinary asset]
-  Original --> Model[Provider and model]
-  Model --> Time[Analysis timestamp]
-```
-
-Caption: Trace endpoints link insight text to source asset metadata and AI provenance.
-
-### Evidence coverage and gaps
-
-```mermaid
-flowchart LR
-  Expected[Expected categories] --> Match[Match analyzed activities]
-  Media[Project media] --> Match
-  Match --> Coverage[Coverage percent]
-  Match --> Missing[Missing categories]
-  Missing --> Gap[Suggested capture actions]
-```
-
-Caption: Coverage uses configured categories and flags missing follow-up evidence.
-
-### Reports and public sharing
-
-```mermaid
-flowchart LR
-  Project --> Assemble[Assemble sections and trace]
-  Insights --> Assemble
-  Assemble --> Report[Stored report]
-  Report --> PDF[PDFKit export]
-  Report --> Publish[Random share slug]
-  Publish --> Public[Sanitized public DTO]
-```
-
-Caption: Public shares omit internal user details and are cacheable for a short period.
-
-### Auth and RBAC
-
-```mermaid
-flowchart LR
-  Login --> JWT[Signed JWT]
-  JWT --> Auth[Auth middleware]
-  Auth --> Role[Role guard]
-  Role --> Owner[Project owner check]
-  Owner --> Route[Protected route]
-```
-
-Caption: Administrative access is global; manager access is owner-scoped; viewers read only.
-
-### Judge demo flow
-
-```mermaid
-flowchart LR
-  Login --> Project --> Upload --> Analyze --> Search --> Evidence
-  Evidence --> Compare --> Trace --> Story --> Report
-```
-
-Caption: The intended walkthrough ends in a report whose statements link back to evidence.
-
-## API reference
-
-All endpoints and roles are listed in [docs/api.md](docs/api.md). Base URL: `/api`; protected calls use `Authorization: Bearer <JWT>`.
-
-| Method | Path | Auth / role | Description |
-|---|---|---|---|
-| GET | `/health` | Public | API/dependency status |
-| POST | `/auth/register` | Public | Register; first account is ADMIN |
-| POST | `/auth/login` | Public | Authenticate and issue JWT |
-| GET | `/auth/me` | User | Current safe user DTO |
-| POST | `/auth/logout` | User | Logout acknowledgement |
-| GET | `/projects` | User | Paginated project list |
-| POST | `/projects` | Manager | Create project |
-| GET | `/projects/:id` | User | Read project |
-| PATCH | `/projects/:id` | Manager | Update project |
-| DELETE | `/projects/:id` | Manager | Archive project |
-| POST | `/projects/:id/analyze` | Manager | Queue project analysis |
-| GET | `/projects/:id/processing-status` | User | Job counts by state |
-| GET | `/projects/:id/dashboard` | User | Project KPIs |
-| GET | `/projects/:id/timeline` | User | Timeline groups |
-| GET | `/projects/:id/locations` | User | Location counts and sources |
-| GET | `/projects/:id/coverage` | User | Evidence coverage and gaps |
-| GET | `/projects/:id/comparisons` | User | Saved comparisons |
-| GET | `/projects/:id/pair-suggestions` | User | Suggested before/after pairs |
-| GET | `/projects/:id/insights` | User | List insights |
-| POST | `/projects/:id/insights/generate` | Manager | Generate insights |
-| GET | `/projects/:id/reports` | User | Paginated project reports |
-| POST | `/media/sign` | Manager | Direct signing endpoint (501 currently) |
-| POST | `/media/upload` | Manager | Multipart media upload |
-| GET | `/media` | User | Paginated media list |
-| GET | `/media/:id` | User | Read authorized asset |
-| PATCH | `/media/:id` | Manager | Correct asset metadata |
-| DELETE | `/media/:id` | Manager | Delete asset and Cloudinary source |
-| POST | `/media/:id/analyze` | Manager | Retry analysis |
-| GET | `/search` | User | Search project evidence |
-| POST | `/analysis/compare` | User | Compare before/after media |
-| GET | `/insights/:id/trace` | User | Trace insight source evidence |
-| GET | `/dashboard/overview` | User | Org/project overview |
-| POST | `/reports/generate` | Manager | Generate structured report |
-| POST | `/reports/story` | Manager | Generate impact story |
-| POST | `/reports/campaign` | Manager | Generate campaign text |
-| GET | `/reports/:id` | User | Read report |
-| GET | `/reports/:id/pdf` | User | Download PDFKit report |
-| PATCH | `/reports/:id/publish` | Manager | Publish report share link |
-| GET | `/reports/public/:slug` | Public | Sanitized shared report |
-
-## Setup and run
-
-Prerequisites: Node 20+, npm, MongoDB (local or hosted). Copy `.env.example` to `.env` and set `MONGODB_URI` and `JWT_SECRET`. AI and Cloudinary may remain unset for mock/demo mode.
+### 2. Load demo data
 
 ```bash
 cd server
-npm install
-npm run dev
-npm run seed        # synthetic offline fixture (tests)
-npm run seed:real   # real openly licensed photos + AI analysis (demo)
-npm test
-npm run smoke
+npm run seed:real      # 28 openly licensed field photos, analysed with your AI provider
+# or
+npm run seed           # synthetic offline fixture (no API keys needed)
 ```
 
-Frontend: `cd client && npm install && npm run dev`, then open http://localhost:3000 (Vite proxies `/api` to the server on :5000). `npm run build` type-checks and builds to `client/dist/`; `npm test` and `npm run test:e2e` run the client suites. Details in [client/README.md](client/README.md).
+### 3. Run
 
-The demo seed prints credentials: `admin@impactlens.demo / Admin123!`, `manager@impactlens.demo / Manager123!`, `viewer@impactlens.demo / Viewer123!`. Change these before any shared deployment.
+```bash
+# terminal 1: API on http://localhost:5000
+cd server && npm run dev
 
-| Variable | Required | Purpose | Example |
-|---|---|---|---|
-| `PORT` | No | HTTP port | `5000` |
-| `NODE_ENV` | No | Runtime mode | `development` |
-| `MONGODB_URI` | Yes | Mongo connection | `mongodb://localhost:27017/impactlens` |
-| `JWT_SECRET` | Yes | Token signing secret | `replace_with_random_secret` |
-| `JWT_EXPIRES_IN` | No | Token lifetime | `7d` |
-| `CLOUDINARY_CLOUD_NAME` | No | Media cloud | empty |
-| `CLOUDINARY_API_KEY` | No | Media API key | empty |
-| `CLOUDINARY_API_SECRET` | No | Media API secret | empty |
-| `CLOUDINARY_MODE` | No | `auto` uses configured Cloudinary; `mock` uses placeholder URLs | `auto` |
-| `AI_PROVIDER` | No | Provider selection | `mock` |
-| `AI_API_KEY` | No | Provider key | empty |
-| `AI_MODEL` | No | Provider model | empty |
-| `CLIENT_URL` | No | Allowed browser origin | `http://localhost:3000` |
-| `PUBLIC_REPORT_BASE_URL` | No | Share URL base | `http://localhost:3000/reports` |
-| `MAX_UPLOAD_MB` | No | Upload size limit | `50` |
-| `RATE_LIMIT_WINDOW_MS` | No | Rate window | `900000` |
-| `RATE_LIMIT_MAX` | No | General request cap | `200` |
-| `RATE_LIMIT_ACTION_MAX` | No | Upload/analysis/generation budget per window (login has its own failed-attempt limit) | `120` |
-| `COOKIE_SAMESITE` | No | Session cookie policy: `lax` for same-site deploys, `none` for a cross-site API (HTTPS) | `lax` |
-| `SESSION_MAX_AGE_MS` | No | Session cookie lifetime | `604800000` |
+# terminal 2: web app on http://localhost:3000 (proxies /api to :5000)
+cd client && npm run dev
+```
 
-Docker: `cd server && docker compose up --build`. Scripts: `npm start`, `npm run test:coverage`, `npm run lint`, `npm run seed:reset`, `npm run smoke`.
+Sign in with one of the seeded accounts:
 
-## ✅ Completed work checklist
+| Role | Email | Password |
+|---|---|---|
+| Project manager | `manager@impactlens.demo` | `Manager123!` |
+| Admin | `admin@impactlens.demo` | `Admin123!` |
+| Viewer (read-only) | `viewer@impactlens.demo` | `Viewer123!` |
 
-- [x] Express app/server separation, typed config, Mongo connector, health route.
-- [x] User, project, media, analysis, insight, report schemas and shared enums.
-- [x] JWT auth, password hashing, role middleware, project owner checks.
-- [x] Project CRUD/archive, media CRUD, paginated query helper, upload queue and retry path.
-- [x] Mock AI metadata, project timeline, locations, coverage/gaps, comparison persistence, insight trace, report generation/public sanitization.
-- [x] API docs, partial OpenAPI spec, Postman collection, Docker files and CI workflow.
-- [x] API integration tests pass (9 tests), coverage run passes, and ESLint passes.
-- [x] Full `npm run smoke` passed against the seeded API in mock AI / mock Cloudinary mode.
-- [x] Gemini analysis verified on real photos and uploads.
-- [ ] Real Cloudinary upload smoke remains unverified (needs the correct cloud name).
+> Change these passwords before sharing a deployment.
 
-## 🛠️ Manual work still required
+## Configuration
 
-- Create/rotate production JWT, MongoDB, Cloudinary, and AI credentials. Configure provider keys outside source control.
-- Confirm Cloudinary folder/preset behavior, upload/delete, metadata/EXIF, video preview, and transformed thumbnail behavior.
-- Replace the Wikimedia demo dataset with the NGO's own project photos and videos when available.
-- Implement direct signed upload, robust file signature detection, video frame extraction, and a durable distributed job queue.
-- Add branded report layout, charts, images, and evidence trace table to the current basic PDFKit export.
-- Configure production environment, Atlas network allowlist/backups, frontend CORS, domain/share route, and deployment.
-- Verify public-report privacy/legal basis, retention rules, real-provider quality, rate limits, and performance under load.
-- Set up Atlas Vector Search only if semantic retrieval is later implemented; it is currently unused.
+All settings live in `.env` at the repository root. See [`.env.example`](.env.example) for the full list.
 
-## Known limitations and assumptions
-
-With `AI_PROVIDER=mock`, MockProvider supplies deterministic demonstration labels, not computer vision (Gemini is used whenever a key is configured). Current search is keyword matching; pairing and coverage are heuristics. The queue is in-process and not safe as a multi-replica durable queue. Without Cloudinary, media is stored on the API server's disk and videos can't be frame-analyzed. Public registration assigns the first account ADMIN and subsequent accounts VIEWER. PDF export has a basic layout; signing, video frame extraction, advanced filtering, cache invalidation, and malformed AI response repair are incomplete.
-
-## AI trust principle
-
-**Observed** means a visual description directly returned by AI. **Inferred** means an interpretation. **Claimed** is reserved for human-supplied project records. The schema separates observed/inferred strings, confidence is labelled as AI confidence, comparison language says “AI-detected visual difference,” and report content includes a verification disclaimer. Visual AI alone does not verify real-world impact.
-
-## Team ownership and frontend integration
-
-| Owner | Area |
+| Variable | Purpose |
 |---|---|
-| Chirag | Backend, AI architecture and integration |
-| Chiranjeet | Frontend and UX |
-| Avnish (listed as Avani in team docs) | Media intelligence, timeline, analysis and jobs |
-| Atharv | Reports, tests, deployment and product docs |
+| `MONGODB_URI` | **Required.** MongoDB connection string |
+| `JWT_SECRET` | **Required.** Session signing secret; use a long random value |
+| `GEMINI_API_KEY` | Enables Gemini analysis, comparison, stories and semantic search |
+| `AI_PROVIDER` | `gemini`, `openai`, `groq` or `mock` (auto-selects Gemini when a key is present) |
+| `GEMINI_MODELS`, `GEMINI_RPM` | Optional model pool and request pacing for free-tier keys |
+| `CLOUDINARY_CLOUD_NAME` / `_API_KEY` / `_API_SECRET` | Media storage and transforms. The cloud name is the lowercase ID on the Cloudinary dashboard |
+| `CLIENT_URL`, `PUBLIC_REPORT_BASE_URL` | Allowed browser origin and public share-link base |
+| `COOKIE_SAMESITE`, `TRUST_PROXY` | Cookie policy and proxy hops for hosted deployments |
+| `MAX_UPLOAD_MB`, `RATE_LIMIT_*` | Upload size and rate limits |
 
-Send `Authorization: Bearer <token>` on protected requests. Lists use `page` and `limit`; responses follow `{success,data,meta}`. Login: `POST /api/auth/login`. Projects screen: `GET /api/projects`; evidence screen: `GET /api/search?q=plantation&projectId=...`; timeline: `GET /api/projects/:id/timeline`; dashboard: `GET /api/projects/:id/dashboard`; report builder: `POST /api/reports/generate` with `{ "projectId":"..." }`. See [API contracts](docs/api.md).
+`GET /api/health` and **Settings → Service status** in the app show which services are connected.
 
-## Judge Q&A
+## Scripts
 
-- **Why not Drive?** ImpactLens attaches AI labels, project context, timelines, comparisons, and traceable reports to the media.
-- **Can AI hallucinate?** Yes. Every observation remains linked to its source and is not represented as proof.
-- **What proves impact?** Visual evidence supports review; independent measurements and project records establish outcomes.
-- **How does it scale?** Mongo stores metadata and media is delegated to Cloudinary; replace the local queue before horizontal scaling.
+| Where | Command | Description |
+|---|---|---|
+| `server/` | `npm run dev` / `npm start` | Start the API (watch mode / production) |
+| `server/` | `npm run seed:real` | Import the real demo dataset (`--reset`, `--reanalyze` supported) |
+| `server/` | `npm run seed` / `npm run seed:reset` | Load or reset the synthetic fixture |
+| `server/` | `npm test` / `npm run test:coverage` | API, integrity and provider tests |
+| `server/` | `npm run lint` / `npm run smoke` | ESLint and end-to-end API smoke check |
+| `client/` | `npm run dev` / `npm run build` | Dev server / type-check and production build |
+| `client/` | `npm test` / `npm run test:e2e` | Unit tests / Playwright E2E with accessibility checks |
+
+## Testing
+
+- **API:** Jest integration tests against an in-memory MongoDB. They cover auth, RBAC, uploads, search, integrity scoring, SDG alignment, reports, public sharing and the Gemini provider's retry and quota handling.
+- **Client:** Vitest and Testing Library with MSW-mocked APIs. They cover forms, the auth store, evidence components and integrity/SDG views.
+- **End to end:** Playwright walks the full flow from sign-in through upload, search, compare, report and public link. A smoke spec checks the core pages for layout overflow and WCAG 2 A/AA violations with axe.
+
+```bash
+cd server && npm test
+cd client && npm test && npm run test:e2e
+```
+
+GitHub Actions runs two pipelines ([`.github/workflows`](.github/workflows)). The client pipeline runs lint, type-check, unit tests, the production build and the Playwright E2E suite. The server pipeline runs lint and the Jest tests with coverage.
+
+## Deployment
+
+The recommended free-tier setup is **MongoDB Atlas → Render (API) → Vercel (client)**:
+
+- `render.yaml` provisions the API.
+- `client/vercel.json` proxies `/api` so the session cookie stays same-site.
+
+A root-context `server/Dockerfile` is also provided. The step-by-step guide is in [docs/deployment.md](docs/deployment.md).
+
+## Project structure
+
+```
+ImpactLens-AI/
+├── client/                 React + TypeScript SPA
+│   ├── src/api/            typed endpoints, query keys, queries and mutations
+│   ├── src/components/     UI kit, evidence, report and chart components
+│   ├── src/pages/          dashboard, projects, evidence, compare, integrity, reports
+│   └── e2e/                Playwright specs
+├── server/                 Express API
+│   ├── routes/ controllers/ middleware/ models/
+│   ├── services/           ai, cloudinary, integrity, sdg, search, report
+│   ├── jobs/               media analysis queue
+│   ├── utils/              seeders, EXIF, smoke test
+│   └── tests/              Jest suites
+├── shared/                 enums and SDG rules shared by client and server
+├── docs/                   architecture, API, AI pipeline, deployment, demo script
+└── DESIGN.md               design system and tokens
+```
+
+## Responsible AI
+
+- **Observed vs inferred.** *Observed* is only what is visible. *Inferred* is interpretation, phrased as "may" or "likely". Claimed outcomes come from human project records, never from the model.
+- **Confidence is labelled, not hidden.** Every AI value shows its confidence and model, and confidence is capped below certainty.
+- **Location provenance.** AI-estimated places never override GPS or user-entered locations, and each location is labelled by its source.
+- **Human review.** Integrity flags and AI comparisons are shown as "AI-detected" signals. Reports carry a verification disclaimer, because visual AI alone does not prove real-world impact.
+
+## Demo dataset credits
+
+The real demo dataset is 28 photographs from [Wikimedia Commons](https://commons.wikimedia.org), used under their Creative Commons licences. Each asset stores its author, licence and source link, and these are shown in the evidence panel. The demo projects are illustrations built from public photos; they are not real NGO programmes.
+
+## Team
+
+| Member | Focus |
+|---|---|
+| **Chirag** | Backend architecture, AI integration |
+| **Chiranjeet** | Frontend, UX and design system |
+| **Avnish** | Media intelligence, timeline, analysis jobs |
+| **Atharv** | Reports, testing, deployment and docs |
+
+## License
+
+Released under the MIT License.
