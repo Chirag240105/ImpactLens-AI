@@ -54,7 +54,7 @@ Owns: `server/controllers`, `server/routes`, `server/models`, `server/middleware
 ## 8. Cross-cutting
 - [ ] Rate limiting on public/auth routes
 - [ ] All MongoDB indexes for the fields Search + Discovery will filter on
-- [ ] Coordinate with Avnish on the exact analysis/comparison payload shape before either side hardcodes it
+- [ ] Coordinate with Avani on the exact analysis/comparison payload shape before either side hardcodes it
 - [ ] Coordinate with Atharv on report data contract (`docs/api.md` §Reports) before Phase 6
 
 Check off items in `PROJECT_PLAN.md` as you complete each phase's backend pieces.

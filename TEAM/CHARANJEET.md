@@ -1,4 +1,4 @@
-# Chiranjeet — Frontend + UX Lead
+# Charanjeet — Frontend + UX Lead
 
 Owns: `client/src/pages`, `client/src/components`, `client/src/layouts`, design system.
 
@@ -22,7 +22,7 @@ Owns: `client/src/pages`, `client/src/components`, `client/src/layouts`, design 
 - [ ] `/projects/:id` — project dashboard: KPI cards (total media, AI analyzed, activities,
       locations, before/after pairs, evidence coverage %)
 - [ ] `/projects/:id/media` — Evidence Explorer: search bar + filter panel + media grid
-- [ ] `/projects/:id/timeline` — timeline view (visual structure owned by Avnish, page shell by you)
+- [ ] `/projects/:id/timeline` — timeline view (visual structure owned by Avani, page shell by you)
 - [ ] `/projects/:id/compare` — Before/After slider + "AI-detected visual changes" panel
 - [ ] `/projects/:id/insights` — AI-generated insights + Evidence Chain viewer
       (claim → source media → Cloudinary asset → AI model → timestamp)
@@ -43,7 +43,7 @@ Owns: `client/src/pages`, `client/src/components`, `client/src/layouts`, design 
 ## 6. Coordination
 - [ ] Confirm API response shapes with Chirag before building each page (don't hardcode mock shapes
       that diverge from `docs/api.md`)
-- [ ] Confirm timeline/map data shape with Avnish
+- [ ] Confirm timeline/map data shape with Avani
 - [ ] Confirm report data shape with Atharv before building `/projects/:id/report`
 
 Check off items in `PROJECT_PLAN.md` as each phase's UI lands.

@@ -11,7 +11,7 @@ Work in this order. Each phase has a clear "deliverable" — don't move on until
 - [ ] Cloudinary connection verified (upload one test file)
 - **Deliverable:** user can log in and create a project.
 
-## Phase 2 — Media Pipeline (Owner: Chirag + Avani, UI: Chiranjeet)
+## Phase 2 — Media Pipeline (Owner: Chirag + Avani, UI: Charanjeet)
 - [ ] Image upload → Cloudinary
 - [ ] Video upload → Cloudinary
 - [ ] Media gallery (grid view)
@@ -26,7 +26,7 @@ Work in this order. Each phase has a clear "deliverable" — don't move on until
 - [ ] Background worker / job queue so uploads don't block on AI analysis
 - **Deliverable:** upload image → AI understands image → metadata visible in UI.
 
-## Phase 4 — Discovery (Owner: Chiranjeet UI, Chirag backend, Avani intelligence)
+## Phase 4 — Discovery (Owner: Charanjeet UI, Chirag backend, Avani intelligence)
 - [ ] Search API (`GET /api/search?q=...`) with natural-language → filter extraction
 - [ ] Filters: project, location, date, activity, object, environmental signal, media type, confidence
 - [ ] Evidence Explorer page
@@ -34,14 +34,14 @@ Work in this order. Each phase has a clear "deliverable" — don't move on until
 - [ ] Map / location intelligence (Avani) — distinguish GPS Verified / User Provided / AI Estimated / Unknown
 - **Deliverable:** user types "show me plantation activities" and gets relevant evidence back.
 
-## Phase 5 — Impact Intelligence (Owner: Avani, UI: Chiranjeet, AI: Chirag)
+## Phase 5 — Impact Intelligence (Owner: Avani, UI: Charanjeet, AI: Chirag)
 - [ ] Before/After picker + slider UI
 - [ ] Visual change analysis + AI-generated observations (worded as "AI-detected", not proof)
 - [ ] Evidence Coverage calculation
 - [ ] Evidence Gap Detection
 - **Deliverable:** raw evidence becomes a measurable visual before/after insight.
 
-## Phase 6 — Reporting (Owner: Atharv, AI/data: Chirag, UI: Chiranjeet)
+## Phase 6 — Reporting (Owner: Atharv, AI/data: Chirag, UI: Charanjeet)
 - [ ] AI Impact Story generator
 - [ ] PDF report generator
 - [ ] Public report (no-login shareable URL, `impactlens.app/report/:slug`)
