@@ -15,8 +15,8 @@ Recommended free-tier setup: **MongoDB Atlas** (database) → **Render** (API, `
    - `MONGODB_URI`
    - `GEMINI_API_KEY`
    - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`. The cloud name is the **Cloud name** on the Cloudinary dashboard, all lowercase, not the account's display name.
-   - `CLIENT_URL`: your exact Vercel origin, for example `https://impactlens.vercel.app`.
-   - `PUBLIC_REPORT_BASE_URL`: that origin plus `/reports`.
+   - `CLIENT_URL`: `https://impact-lens-ai-one.vercel.app` (allowed browser origin).
+   - `PUBLIC_REPORT_BASE_URL`: `https://impact-lens-ai-one.vercel.app/reports` (public share-link base).
 
    `JWT_SECRET` is generated automatically.
 3. After the first deploy, open `https://<service>.onrender.com/api/health`. You want `"database":"connected"`, `"cloudinary":"configured"` and `"aiProvider":"gemini"`.
@@ -27,7 +27,7 @@ Recommended free-tier setup: **MongoDB Atlas** (database) → **Render** (API, `
 ## 3. Client (Vercel)
 
 1. Vercel → **Add New Project** → import this repository and set **Root Directory** to `client`. The framework preset (Vite), build command and output folder come from `client/vercel.json`.
-2. Edit `client/vercel.json` so the `/api/:path*` rewrite points at your Render URL, if it isn't `https://impactlens-api.onrender.com`.
+2. The `/api/:path*` rewrite in `client/vercel.json` points at `https://impactlens-ai-1.onrender.com`.
 3. Leave `VITE_API_BASE_URL` unset (same-origin `/api`).
 4. Deploy, then sign in with `manager@impactlens.demo / Manager123!` and change the demo passwords before sharing widely.
 
