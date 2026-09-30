@@ -148,6 +148,15 @@ function renderReportPdf(report) {
       heading('Evidence gaps');
       c.evidenceGaps.forEach((g) => para(`${g.message} — ${g.suggestedAction}`));
     }
+    if (c.integrity && c.integrity.score !== null && c.integrity.score !== undefined) {
+      heading('Evidence integrity');
+      para(
+        `Integrity score ${c.integrity.score}/100 — ${c.integrity.clean} of ${c.integrity.assetsChecked} assets passed every check (duplicates, camera metadata, capture dates, distance from site); ${c.integrity.reviewNeeded} flagged for review.`,
+      );
+      (c.integrity.flagged || [])
+        .slice(0, 15)
+        .forEach((f) => para(`•  ${f.asset}: ${f.flags.join(' ')}`, { indent: 4, size: 9.5 }));
+    }
     if (c.traceability?.length) {
       heading('Evidence traceability');
       const cols = [0.44, 0.26, 0.3].map((f) => f * width);

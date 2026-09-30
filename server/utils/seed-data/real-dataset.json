@@ -7,25 +7,74 @@
       "organization": "ImpactLens Demo (Wikimedia Commons photos)",
       "category": "River & wetland restoration",
       "description": "Demonstration project assembled from openly licensed Wikimedia Commons photographs of the Yamuna and Hindon rivers around Delhi, Noida and Ghaziabad (2014–2025). It is not an actual NGO programme; every photo keeps its original author and licence.",
-      "location": { "name": "Okhla Bird Sanctuary, Noida" },
+      "location": {
+        "name": "Okhla Bird Sanctuary, Noida"
+      },
       "goals": [
         "Document riverbank and wetland condition over time",
         "Capture follow-up evidence at the same sites",
         "Show community use of restored river frontage"
       ],
-      "expectedEvidenceCategories": ["Cleaning", "Restoration", "Community Participation", "Infrastructure", "Follow-up"],
+      "expectedEvidenceCategories": [
+        "Cleaning",
+        "Restoration",
+        "Community Participation",
+        "Infrastructure",
+        "Follow-up"
+      ],
       "items": [
-        { "title": "File:View of yamuna from okhla bird sanctuary.jpg", "evidenceType": "BEFORE", "place": "Okhla Bird Sanctuary, Noida" },
-        { "title": "File:Okhla Bird Sanctuary Noida Delhi.jpg", "evidenceType": "BEFORE", "place": "Okhla Bird Sanctuary, Noida" },
-        { "title": "File:\" Okhla Bird Sanctuary Okhla Noida \".jpg", "evidenceType": "FIELD_EVIDENCE", "place": "Okhla Bird Sanctuary, Noida" },
-        { "title": "File:Yamuna River, Uttar Pradesh, India (2016).jpg", "evidenceType": "FIELD_EVIDENCE", "place": "Mathura, Uttar Pradesh" },
-        { "title": "File:River Hindon - Aerial View - Ghaziabad 2016-08-04 5763.JPG", "evidenceType": "FIELD_EVIDENCE", "place": "Hindon River, Ghaziabad" },
-        { "title": "File:Yamuna from Okhla bird Sanctuary.jpg", "evidenceType": "FIELD_EVIDENCE", "place": "Okhla Bird Sanctuary, Noida" },
-        { "title": "File:Okhla bird sanctuary pan.jpg", "evidenceType": "FIELD_EVIDENCE", "place": "Okhla Bird Sanctuary, Noida" },
-        { "title": "File:Okhla bird sanctuary river.jpg", "evidenceType": "AFTER", "place": "Okhla Bird Sanctuary, Noida" },
-        { "title": "File:An eve on the bank of Yamuna.jpg", "evidenceType": "FIELD_EVIDENCE", "place": "Kalindi Kunj, New Delhi" },
-        { "title": "File:A view of the polluted Yamuna at the Okhla Bird sanctuary.jpg", "evidenceType": "FOLLOW_UP", "place": "Okhla Bird Sanctuary, Noida" }
-      ]
+        {
+          "title": "File:View of yamuna from okhla bird sanctuary.jpg",
+          "evidenceType": "BEFORE",
+          "place": "Okhla Bird Sanctuary, Noida"
+        },
+        {
+          "title": "File:Okhla Bird Sanctuary Noida Delhi.jpg",
+          "evidenceType": "BEFORE",
+          "place": "Okhla Bird Sanctuary, Noida"
+        },
+        {
+          "title": "File:\" Okhla Bird Sanctuary Okhla Noida \".jpg",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Okhla Bird Sanctuary, Noida"
+        },
+        {
+          "title": "File:Yamuna River, Uttar Pradesh, India (2016).jpg",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Mathura, Uttar Pradesh"
+        },
+        {
+          "title": "File:River Hindon - Aerial View - Ghaziabad 2016-08-04 5763.JPG",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Hindon River, Ghaziabad"
+        },
+        {
+          "title": "File:Yamuna from Okhla bird Sanctuary.jpg",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Okhla Bird Sanctuary, Noida"
+        },
+        {
+          "title": "File:Okhla bird sanctuary pan.jpg",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Okhla Bird Sanctuary, Noida"
+        },
+        {
+          "title": "File:Okhla bird sanctuary river.jpg",
+          "evidenceType": "AFTER",
+          "place": "Okhla Bird Sanctuary, Noida"
+        },
+        {
+          "title": "File:An eve on the bank of Yamuna.jpg",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Kalindi Kunj, New Delhi"
+        },
+        {
+          "title": "File:A view of the polluted Yamuna at the Okhla Bird sanctuary.jpg",
+          "evidenceType": "FOLLOW_UP",
+          "place": "Okhla Bird Sanctuary, Noida"
+        }
+      ],
+      "siteRadiusKm": 60
     },
     {
       "key": "communities",
@@ -33,33 +82,112 @@
       "organization": "ImpactLens Demo (Wikimedia Commons photos)",
       "category": "Community cleanliness & tree planting",
       "description": "Demonstration project assembled from openly licensed Wikimedia Commons photographs of cleanliness drives and tree-planting activities across India (2009–2025). It is not an actual NGO programme; every photo keeps its original author and licence.",
-      "location": { "name": "India (multiple cities)" },
+      "location": {
+        "name": "India (multiple cities)"
+      },
       "goals": [
         "Evidence volunteer cleanliness drives",
         "Document tree planting by communities and schools",
         "Record waste-management infrastructure"
       ],
-      "expectedEvidenceCategories": ["Cleaning", "Plantation", "Community Participation", "Waste Management", "Awareness", "Follow-up"],
+      "expectedEvidenceCategories": [
+        "Cleaning",
+        "Plantation",
+        "Community Participation",
+        "Waste Management",
+        "Awareness",
+        "Follow-up"
+      ],
       "items": [
-        { "title": "File:Charkop Tree Plantation.JPG", "evidenceType": "FIELD_EVIDENCE", "place": "Charkop, Mumbai" },
-        { "title": "File:Tree Plantation Drive - panoramio.jpg", "evidenceType": "FIELD_EVIDENCE", "place": "Pune, Maharashtra" },
-        { "title": "File:India - Kids - Planting trees for her future (4040009491).jpg", "evidenceType": "FIELD_EVIDENCE" },
-        { "title": "File:Plant a Sapling for Better Future.jpg", "evidenceType": "FIELD_EVIDENCE" },
-        { "title": "File:Women planting saplings .jpg", "evidenceType": "FIELD_EVIDENCE", "place": "Taranagar, Rajasthan" },
-        { "title": "File:Planting of Mango Tree.jpg", "evidenceType": "FIELD_EVIDENCE" },
-        { "title": "File:Swach Bharat Abhiyana in Civil Court premises, Rayagada.JPG", "evidenceType": "FIELD_EVIDENCE", "place": "Rayagada, Odisha" },
-        { "title": "File:Door-to-door Garbage Collection Vans in Indore - Under Swachh Bharat Abhiyan.jpg", "evidenceType": "FIELD_EVIDENCE", "place": "Indore, Madhya Pradesh" },
-        { "title": "File:Clean India Pledge - NCSM - Kolkata 2018-04-16 0124.JPG", "evidenceType": "FIELD_EVIDENCE", "place": "Salt Lake, Kolkata" },
-        { "title": "File:Clean Monument - Clean India slogan on Kashmiri Gate.jpg", "evidenceType": "FIELD_EVIDENCE", "place": "Kashmiri Gate, Delhi" },
-        { "title": "File:Swachh Bharat Abhiyan, July 2016.jpg", "evidenceType": "FIELD_EVIDENCE", "place": "Baranagar, Kolkata" },
-        { "title": "File:Swachh Bharat Abhiyan, July 2016(1).jpg", "evidenceType": "FIELD_EVIDENCE", "place": "Baranagar, Kolkata" },
-        { "title": "File:Swachh Bharat Abhiyan, July 2016(3).jpg", "evidenceType": "FIELD_EVIDENCE", "place": "Baranagar, Kolkata" },
-        { "title": "File:Swachh Bharat Abhiyan, July 2016(5).jpg", "evidenceType": "FIELD_EVIDENCE", "place": "Baranagar, Kolkata" },
-        { "title": "File:Swachh Bharat Abhiyan, July 2016(8).jpg", "evidenceType": "FIELD_EVIDENCE", "place": "Baranagar, Kolkata" },
-        { "title": "File:Walkathon organized by Oil India Limited on the theme of Swachh Bharat Abhiyan to commemorate the 76th Republic Day of India. 03.jpg", "evidenceType": "FIELD_EVIDENCE", "place": "Duliajan, Assam" },
-        { "title": "File:Walkathon organized by Oil India Limited on the theme of Swachh Bharat Abhiyan to commemorate the 76th Republic Day of India. 02.jpg", "evidenceType": "FIELD_EVIDENCE", "place": "Duliajan, Assam" },
-        { "title": "File:Photograph of public-waste segregation bins, Amritsar, Punjab, India, 8 April 2023.jpg", "evidenceType": "FIELD_EVIDENCE", "place": "Amritsar, Punjab" }
-      ]
+        {
+          "title": "File:Charkop Tree Plantation.JPG",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Charkop, Mumbai"
+        },
+        {
+          "title": "File:Tree Plantation Drive - panoramio.jpg",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Pune, Maharashtra"
+        },
+        {
+          "title": "File:India - Kids - Planting trees for her future (4040009491).jpg",
+          "evidenceType": "FIELD_EVIDENCE"
+        },
+        {
+          "title": "File:Plant a Sapling for Better Future.jpg",
+          "evidenceType": "FIELD_EVIDENCE"
+        },
+        {
+          "title": "File:Women planting saplings .jpg",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Taranagar, Rajasthan"
+        },
+        {
+          "title": "File:Planting of Mango Tree.jpg",
+          "evidenceType": "FIELD_EVIDENCE"
+        },
+        {
+          "title": "File:Swach Bharat Abhiyana in Civil Court premises, Rayagada.JPG",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Rayagada, Odisha"
+        },
+        {
+          "title": "File:Door-to-door Garbage Collection Vans in Indore - Under Swachh Bharat Abhiyan.jpg",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Indore, Madhya Pradesh"
+        },
+        {
+          "title": "File:Clean India Pledge - NCSM - Kolkata 2018-04-16 0124.JPG",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Salt Lake, Kolkata"
+        },
+        {
+          "title": "File:Clean Monument - Clean India slogan on Kashmiri Gate.jpg",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Kashmiri Gate, Delhi"
+        },
+        {
+          "title": "File:Swachh Bharat Abhiyan, July 2016.jpg",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Baranagar, Kolkata"
+        },
+        {
+          "title": "File:Swachh Bharat Abhiyan, July 2016(1).jpg",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Baranagar, Kolkata"
+        },
+        {
+          "title": "File:Swachh Bharat Abhiyan, July 2016(3).jpg",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Baranagar, Kolkata"
+        },
+        {
+          "title": "File:Swachh Bharat Abhiyan, July 2016(5).jpg",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Baranagar, Kolkata"
+        },
+        {
+          "title": "File:Swachh Bharat Abhiyan, July 2016(8).jpg",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Baranagar, Kolkata"
+        },
+        {
+          "title": "File:Walkathon organized by Oil India Limited on the theme of Swachh Bharat Abhiyan to commemorate the 76th Republic Day of India. 03.jpg",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Duliajan, Assam"
+        },
+        {
+          "title": "File:Walkathon organized by Oil India Limited on the theme of Swachh Bharat Abhiyan to commemorate the 76th Republic Day of India. 02.jpg",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Duliajan, Assam"
+        },
+        {
+          "title": "File:Photograph of public-waste segregation bins, Amritsar, Punjab, India, 8 April 2023.jpg",
+          "evidenceType": "FIELD_EVIDENCE",
+          "place": "Amritsar, Punjab"
+        }
+      ],
+      "siteRadiusKm": null
     }
   ]
 }

@@ -20,6 +20,8 @@ router.get('/:id/dashboard', auth, run(c.dashboard));
 router.get('/:id/timeline', auth, run(c.timeline));
 router.get('/:id/locations', auth, run(c.locations));
 router.get('/:id/coverage', auth, run(c.coverage));
+router.get('/:id/integrity', auth, run(c.integrity));
+router.get('/:id/sdgs', auth, run(c.sdgs));
 router.get('/:id/comparisons', auth, run(c.comparisons));
 router.get('/:id/pair-suggestions', auth, run(c.pairs));
 router.get('/:id/insights', auth, run(c.insights));

@@ -20,6 +20,7 @@ import {
   Moon,
   Search,
   Settings,
+  ShieldCheck,
   SlidersHorizontal,
   Sun,
   X,
@@ -40,6 +41,7 @@ const PROJECT_NAV = [
   { to: 'locations', label: 'Locations', icon: MapPinned },
   { to: 'compare', label: 'Before / After', icon: GitCompareArrows },
   { to: 'insights', label: 'AI Insights', icon: Lightbulb },
+  { to: 'integrity', label: 'Integrity review', icon: ShieldCheck },
   { to: 'reports', label: 'Reports', icon: FileText },
   { to: 'settings', label: 'Project settings', icon: SlidersHorizontal },
 ];

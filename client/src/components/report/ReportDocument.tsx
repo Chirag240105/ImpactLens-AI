@@ -8,6 +8,7 @@ import { CoverageRing, BarList } from '@/components/charts';
 import { MediaThumb } from '@/components/evidence/MediaThumb';
 import { BeforeAfterSlider } from '@/components/evidence/BeforeAfterSlider';
 import { AiLabel, LocationSourceBadge, TrustKindBadge } from '@/components/evidence/Badges';
+import { SdgList } from '@/components/Sdg';
 import { Reveal } from './Reveal';
 
 function Block({ id, eyebrow, title, children, reveal }: { id: string; eyebrow?: ReactNode; title: string; children: ReactNode; reveal?: boolean }) {
@@ -207,6 +208,39 @@ export function ReportDocument({
               </li>
             ))}
           </ul>
+        </Block>
+      )}
+
+      {!!c.sdgs?.length && (
+        <Block id="sdgs" eyebrow="UN Sustainable Development Goals" title="SDG alignment" reveal={reveal}>
+          <p className="mb-4 text-meta text-ink-3">Share of analyzed evidence showing activity related to each goal. Alignment is not a measured contribution.</p>
+          <SdgList items={c.sdgs} />
+        </Block>
+      )}
+
+      {c.integrity && c.integrity.score !== null && (
+        <Block id="integrity" eyebrow="Anti-greenwashing checks" title="Evidence integrity" reveal={reveal}>
+          <div className="grid gap-6 md:grid-cols-[auto_minmax(0,1fr)]">
+            <CoverageRing percent={c.integrity.score} size={104} label="Integrity score" />
+            <div className="grid content-start gap-3 text-sm text-ink-2">
+              <p>
+                {c.integrity.clean} of {c.integrity.assetsChecked} assets passed every check (duplicates, camera metadata, capture dates, distance from site).{' '}
+                {c.integrity.reviewNeeded ? `${c.integrity.reviewNeeded} were flagged for human review.` : 'None needed review.'}
+              </p>
+              {!!c.integrity.flagged.length && (
+                <ul className="grid gap-1.5 text-meta">
+                  {c.integrity.flagged.slice(0, 12).map((f, i) => (
+                    <li key={i} className="flex gap-2">
+                      <ShieldAlert className="mt-0.5 size-3.5 shrink-0 text-warning" aria-hidden />
+                      <span>
+                        <b className="font-semibold">{f.asset}</b>: {f.flags.join(' ')}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
         </Block>
       )}
 

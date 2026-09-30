@@ -6,7 +6,9 @@ Frontend-facing response details:
 
 - Media lists (`/media`, `/search`) omit `secureUrl` and include `thumbnailUrl` and `previewUrl` (Cloudinary transforms for real assets; the source URL in demo mode). `GET /media/:id` includes both plus `secureUrl`.
 - `/media` and `/search` filters: `evidenceType`, `resourceType`, `processingStatus`, `activity`, `object`, `signal`, `location`, `locationSource`, `minConfidence` (0–1), `from`, `to`. User-supplied patterns are regex-escaped.
-- `/search?q=` drops filler words ("show", "evidence of", …), matches the remaining terms across tags, descriptions, summaries, file names, activities, objects, signals and place names over the whole filtered set, ranks by matched terms, then paginates. Items carry `searchScore` (0–1) and `matchedTerms`; `queryUnderstanding.keywords` lists the terms used.
+- **Semantic search:** with a Gemini key, `/search` embeds the query (`gemini-embedding-001`) and ranks the filtered set by cosine similarity (≥ 0.63, within 0.1 of the best match), blended 70/30 with keyword matches; `queryUnderstanding.mode` is `semantic` or `keyword`, and items carry `semanticScore`.
+- **Integrity and SDGs:** media lists scoped to a project, and `GET /media/:id`, include `integrity: { score, flags[] }`; the detail also includes `sdgs` (goal, name, matched terms) and, for Cloudinary videos, `frameUrls`. Project dashboards and reports include integrity and SDG summaries.
+- `/search?q=` (keyword mode) drops filler words ("show", "evidence of", …), matches the remaining terms across tags, descriptions, summaries, file names, activities, objects, signals and place names over the whole filtered set, ranks by matched terms, then paginates. Items carry `searchScore` (0–1) and `matchedTerms`; `queryUnderstanding.keywords` lists the terms used.
 - `pair-suggestions` and `comparisons` embed `before`/`after` media cards; pairs prefer later captures at the same named location and include a `reason`.
 - Timeline months include a readable `label` ("Jan 2026"), `evidenceTypes` counts and up to four `highlights`.
 - `/dashboard/overview` adds `activeProjectCount`, `analyzedCount`, `pendingCount`, `failedCount`, `reportCount` and `recentActivity`.
@@ -28,6 +30,8 @@ Frontend-facing response details:
 | GET | `/projects/:id/timeline` | User | Capture-date grouped timeline |
 | GET | `/projects/:id/locations` | User | Location counts and source labels |
 | GET | `/projects/:id/coverage` | User | Expected category coverage and evidence gaps |
+| GET | `/projects/:id/integrity` | User | Evidence integrity score, flags by type, flagged assets |
+| GET | `/projects/:id/sdgs` | User | Evidence aligned with UN Sustainable Development Goals |
 | GET | `/projects/:id/comparisons` | User | Saved comparisons |
 | GET | `/projects/:id/pair-suggestions` | User | Before/after candidates |
 | GET, POST | `/projects/:id/insights`, `/projects/:id/insights/generate` | User / manager | List or generate traceable insights |

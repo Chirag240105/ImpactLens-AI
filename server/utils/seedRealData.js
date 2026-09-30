@@ -17,6 +17,8 @@ const Insight = require('../models/Insight');
 const Analysis = require('../models/Analysis');
 const Report = require('../models/Report');
 const { extractExif } = require('./exif');
+const { fingerprint } = require('../services/integrity/fingerprint');
+const fsp = require('fs/promises');
 const cloud = require('../services/cloudinary/upload.service');
 const { projectFolder } = require('../services/cloudinary/folders');
 const manifest = require('./seed-data/real-dataset.json');
@@ -167,6 +169,7 @@ async function importItem(project, item, owner) {
   const head = await fetchBuffer(info.originalUrl, { Range: 'bytes=0-262143' }).catch(() => null);
   const exif = head ? extractExif(head) : {};
   const image = await fetchBuffer(info.thumbUrl);
+  const print = await fingerprint(image);
 
   let location = { source: 'UNKNOWN' };
   if (exif.location)
@@ -196,6 +199,9 @@ async function importItem(project, item, owner) {
     secureUrl: up.secure_url,
     storage: up.storage,
     phash: up.phash,
+    fingerprint: print,
+    // Camera metadata comes from the original file (Commons thumbnails strip EXIF).
+    camera: head ? exif.camera : undefined,
     resourceType: 'image',
     format: up.format || 'jpg',
     bytes: up.bytes || image.length,
@@ -217,6 +223,45 @@ async function importItem(project, item, owner) {
     processingStatus: 'PENDING',
   });
   return { asset, gps: Boolean(exif.location), dated: Boolean(exif.captureDate || info.date) };
+}
+
+/** Adds fingerprints / camera metadata to assets imported before integrity checks existed. */
+async function backfillIntegrity(projectIds) {
+  const missing = await Media.find({
+    projectId: { $in: projectIds },
+    $or: [
+      { 'fingerprint.sha256': { $exists: false } },
+      // Camera metadata needs the Commons API (rate-limited), so it's opt-in.
+      ...(process.argv.includes('--backfill-camera') ? [{ camera: { $exists: false } }] : []),
+    ],
+  });
+  if (!missing.length) return;
+  console.log(`
+Backfilling integrity data for ${missing.length} assets`);
+  for (const a of missing) {
+    try {
+      if (!a.fingerprint?.sha256) {
+        const local = cloud.localPathFor(a.cloudinaryPublicId);
+        const buf = local ? await fsp.readFile(local) : await fetchBuffer(a.secureUrl);
+        a.fingerprint = await fingerprint(buf, { isImage: a.resourceType === 'image' });
+      }
+      if (
+        process.argv.includes('--backfill-camera') &&
+        a.attribution?.title &&
+        a.camera?.hasExif === undefined
+      ) {
+        const info = await commonsInfo(`File:${a.attribution.title}`);
+        const head = await fetchBuffer(info.originalUrl, { Range: 'bytes=0-262143' }).catch(
+          () => null,
+        );
+        if (head) a.camera = extractExif(head).camera;
+        await sleep(1500);
+      }
+      await a.save();
+    } catch (err) {
+      console.log(`  ! ${a.originalFilename}: ${err.message}`);
+    }
+  }
 }
 
 async function waitForAnalysis(projectIds) {
@@ -261,6 +306,7 @@ async function seedReal() {
       goals: spec.goals,
       status: 'ACTIVE',
       expectedEvidenceCategories: spec.expectedEvidenceCategories,
+      siteRadiusKm: spec.siteRadiusKm ?? null,
       createdBy: owner._id,
     };
     project = project ? await Object.assign(project, fields).save() : await Project.create(fields);
@@ -294,6 +340,7 @@ async function seedReal() {
       );
     queued.forEach((id) => enqueue(id));
   }
+  await backfillIntegrity(projectIds);
   // --reanalyze: re-run AI on every demo asset (e.g. after a prompt or model change).
   if (process.argv.includes('--reanalyze')) {
     await Media.updateMany(
@@ -310,6 +357,16 @@ async function seedReal() {
     .lean();
   leftover.forEach(({ _id }) => enqueue(_id));
   await waitForAnalysis(projectIds);
+  // Semantic-search vectors for analyzed photos that don't have one yet.
+  const toEmbed = await Media.find({
+    projectId: { $in: projectIds },
+    processingStatus: 'COMPLETED',
+    embeddingModel: { $exists: false },
+  }).lean();
+  if (toEmbed.length)
+    console.log(
+      `  embeddings created: ${await require('../services/ai/embeddings').embedAssets(toEmbed)}`,
+    );
   for (const id of projectIds) {
     // Insights are derived from the analysis, so rebuild them from the final results.
     await Insight.deleteMany({ projectId: id });

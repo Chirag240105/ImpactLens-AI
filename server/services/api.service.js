@@ -14,6 +14,13 @@ const { createProvider } = require('./ai/providerFactory');
 const cloud = require('./cloudinary/upload.service');
 const { projectFolder } = require('./cloudinary/folders');
 const { enqueue } = require('../jobs/queue');
+const { projectIntegrity } = require('./integrity/integrity.service');
+const { fingerprint } = require('./integrity/fingerprint');
+const { assetSdgs, projectSdgs } = require('./sdg/sdg.service');
+const embeddings = require('./ai/embeddings');
+// Semantic search: minimum cosine similarity, and how far below the best match results may fall.
+const SEMANTIC_MIN = 0.63;
+const SEMANTIC_BAND = 0.1;
 const {
   deliveryUrls,
   isCloudinaryAsset,
@@ -25,6 +32,7 @@ const withUrls = (a) => (a ? { ...a, ...deliveryUrls(a) } : a);
 const listItem = (a) => {
   const out = withUrls(a);
   delete out.secureUrl;
+  delete out.embedding; // internal search vector
   return out;
 };
 const lean = (a) => (a && typeof a.toObject === 'function' ? a.toObject() : a);
@@ -161,7 +169,7 @@ exports.listMedia = async (q, u) => {
     Media.countDocuments(f),
   ]);
   return {
-    items: items.map(listItem),
+    items: await withIntegrity(items.map(listItem), q.projectId),
     total,
     page,
     limit,
@@ -189,9 +197,9 @@ exports.upload = async (files, body, u) => {
   }
   const saved = [];
   for (const file of files) {
-    const exif = file.mimetype.startsWith('image/')
-      ? require('../utils/exif').extractExif(file.buffer)
-      : {};
+    const isImage = file.mimetype.startsWith('image/');
+    const exif = isImage ? require('../utils/exif').extractExif(file.buffer) : {};
+    const print = await fingerprint(file.buffer, { isImage });
     const up = await cloud.uploadBuffer(file.buffer, {
       mime: file.mimetype,
       folder: projectFolder(body.projectId, body.evidenceType),
@@ -203,6 +211,8 @@ exports.upload = async (files, body, u) => {
       secureUrl: up.secure_url,
       storage: up.storage || 'cloudinary',
       phash: up.phash,
+      fingerprint: print,
+      camera: exif.camera,
       resourceType: up.resource_type === 'video' ? 'video' : 'image',
       format: up.format,
       bytes: up.bytes,
@@ -219,7 +229,45 @@ exports.upload = async (files, body, u) => {
   }
   return saved;
 };
-exports.getMedia = async (id, u) => withUrls(lean(await media(id, u)));
+exports.getMedia = async (id, u) => {
+  const a = withUrls(lean(await media(id, u)));
+  const { byId } = await projectIntegrity(a.projectId);
+  return {
+    ...a,
+    integrity: byId.get(String(a._id)),
+    sdgs: assetSdgs(a),
+    // Key frames (10/50/90%) for Cloudinary videos, shown as a strip in the evidence panel.
+    frameUrls:
+      a.resourceType === 'video' && isCloudinaryAsset(a)
+        ? require('./cloudinary/transform.service').videoFrames(a.cloudinaryPublicId)
+        : undefined,
+  };
+};
+exports.sdgs = async (id, u) => {
+  await project(id, u);
+  return projectSdgs(id);
+};
+/** Attaches per-asset integrity results when a list is scoped to one project. */
+async function withIntegrity(items, projectId) {
+  if (!projectId || !items.length) return items;
+  const { byId } = await projectIntegrity(projectId);
+  return items.map((a) => ({ ...a, integrity: byId.get(String(a._id)) }));
+}
+exports.integrity = async (id, u) => {
+  await project(id, u);
+  const { byId, summary } = await projectIntegrity(id);
+  const flagged = await Media.find({
+    _id: { $in: [...byId.keys()].filter((k) => byId.get(k).flags.length) },
+  })
+    .select('-embedding')
+    .lean();
+  return {
+    ...summary,
+    assets: flagged
+      .map((a) => ({ ...mediaCard(a), integrity: byId.get(String(a._id)) }))
+      .sort((x, y) => x.integrity.score - y.integrity.score),
+  };
+};
 exports.updateMedia = async (id, b, u) => {
   const a = await media(id, u);
   for (const k of ['location', 'evidenceType', 'captureDate']) if (b[k] !== undefined) a[k] = b[k];
@@ -255,35 +303,72 @@ exports.search = async (q, u) => {
     };
   const { page, limit, skip } = pageOf(q);
   const f = await mediaFilter(q, u);
-  const patterns = words.map((w) => new RegExp(escapeRegex(w), 'i'));
-  f.$or = SEARCH_FIELDS.flatMap((field) => patterns.map((p) => ({ [field]: p })));
-  // Candidate set is bounded, then ranked by how many query words each asset matches.
-  const candidates = await Media.find(f)
-    .select('-embedding')
-    .sort({ captureDate: -1 })
-    .limit(1000)
-    .lean();
-  const ranked = candidates
-    .map((a) => {
-      const text = SEARCH_FIELDS.map((field) =>
-        field.split('.').reduce((v, k) => (Array.isArray(v) ? v.map((x) => x?.[k]) : v?.[k]), a),
-      )
-        .flat()
-        .join(' ')
-        .toLowerCase();
-      const matched = words.filter((w) => text.includes(w));
-      return { a, score: matched.length, matched };
-    })
-    .sort((x, y) => y.score - x.score);
-  const items = ranked.slice(skip, skip + limit).map(({ a, score, matched }) => {
-    return { ...listItem(a), searchScore: score / words.length, matchedTerms: matched };
-  });
+  const keywordText = (a) =>
+    SEARCH_FIELDS.map((field) =>
+      field.split('.').reduce((v, k) => (Array.isArray(v) ? v.map((x) => x?.[k]) : v?.[k]), a),
+    )
+      .flat()
+      .join(' ')
+      .toLowerCase();
+
+  // Semantic mode: rank the filtered set by meaning (query vs asset embeddings), blended with
+  // keyword matches. Falls back to keyword-only when embeddings aren't available.
+  let queryVector = null;
+  if (embeddings.enabled())
+    queryVector = await embeddings.embedQuery(String(q.q)).catch(() => null);
+  let ranked;
+  if (queryVector) {
+    const candidates = await Media.find(f)
+      .select('+embedding')
+      .sort({ captureDate: -1 })
+      .limit(2000)
+      .lean();
+    const scored = candidates.map((a) => {
+      const matched = words.filter((w) => keywordText(a).includes(w));
+      const sim = a.embedding?.length ? embeddings.cosine(queryVector, a.embedding) : 0;
+      return { a, matched, sim, score: 0.7 * sim + 0.3 * (matched.length / words.length) };
+    });
+    const best = Math.max(0, ...scored.map((x) => x.sim));
+    ranked = scored
+      .filter((x) => x.matched.length || (x.sim >= SEMANTIC_MIN && x.sim >= best - SEMANTIC_BAND))
+      .sort((x, y) => y.score - x.score);
+  } else {
+    const patterns = words.map((w) => new RegExp(escapeRegex(w), 'i'));
+    f.$or = SEARCH_FIELDS.flatMap((field) => patterns.map((p) => ({ [field]: p })));
+    // Candidate set is bounded, then ranked by how many query words each asset matches.
+    const candidates = await Media.find(f)
+      .select('-embedding')
+      .sort({ captureDate: -1 })
+      .limit(1000)
+      .lean();
+    ranked = candidates
+      .map((a) => {
+        const matched = words.filter((w) => keywordText(a).includes(w));
+        return { a, matched, score: matched.length / words.length };
+      })
+      .sort((x, y) => y.score - x.score);
+  }
+  const items = await withIntegrity(
+    ranked.slice(skip, skip + limit).map(({ a, score, matched, sim }) => {
+      return {
+        ...listItem(a),
+        searchScore: Math.round(score * 100) / 100,
+        semanticScore: sim === undefined ? undefined : Math.round(sim * 100) / 100,
+        matchedTerms: matched,
+      };
+    }),
+    q.projectId,
+  );
   return {
     items,
     total: ranked.length,
     page,
     limit,
-    queryUnderstanding: { keywords: words, provider: config.aiProvider },
+    queryUnderstanding: {
+      keywords: words,
+      provider: config.aiProvider,
+      mode: queryVector ? 'semantic' : 'keyword',
+    },
   };
 };
 exports.compare = async (b, u) => {
@@ -561,6 +646,8 @@ exports.dashboard = async (id, u) => {
     beforeAfterPairs: (await exports.pairs(id, u)).length,
     evidenceCoverage: coverage,
     environmentalSignals: uniq(x.signals),
+    integrity: (await projectIntegrity(id)).summary,
+    sdgs: await projectSdgs(id),
   };
 };
 exports.overview = async (u) => {
@@ -696,6 +783,31 @@ async function reportContent(id, u) {
       timestamp: a.analysis?.analyzedAt,
     })),
     evidenceGaps: coverage.gaps,
+    sdgs: (await projectSdgs(id)).map(({ goal, name, assets: n, share, topTerms }) => ({
+      goal,
+      name,
+      assets: n,
+      share,
+      topTerms,
+    })),
+    integrity: await (async () => {
+      const { byId, summary } = await projectIntegrity(id);
+      const names = Object.fromEntries(assets.map((a) => [String(a._id), a.originalFilename]));
+      return {
+        score: summary.score,
+        assetsChecked: summary.assetsChecked,
+        clean: summary.clean,
+        reviewNeeded: summary.reviewNeeded,
+        byFlag: summary.byFlag,
+        flagged: [...byId.entries()]
+          .filter(([, r]) => r.flags.some((f) => f.severity !== 'low'))
+          .map(([assetId, r]) => ({
+            asset: names[assetId],
+            score: r.score,
+            flags: r.flags.filter((f) => f.severity !== 'low').map((f) => f.message),
+          })),
+      };
+    })(),
     methodology: 'AI-generated observations are not proof of real-world outcomes.',
     traceability: assets.map((a) => ({
       assetId: a._id,

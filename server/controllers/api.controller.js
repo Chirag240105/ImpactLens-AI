@@ -46,6 +46,8 @@ for (const [key, fn] of [
   ['pairs', 'pairs'],
   ['insights', 'insights'],
   ['dashboard', 'dashboard'],
+  ['integrity', 'integrity'],
+  ['sdgs', 'sdgs'],
 ])
   c[key] = async (req, res) => ok(res, await svc[fn](req.params.id, req.user));
 c.generateInsights = async (req, res) =>

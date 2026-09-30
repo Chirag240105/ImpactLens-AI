@@ -50,6 +50,8 @@ export const q = {
     queryOptions({ queryKey: keys.projectPart(id, 'locations'), queryFn: () => projectsApi.locations(id) }),
   coverage: (id: string) =>
     queryOptions({ queryKey: keys.projectPart(id, 'coverage'), queryFn: () => projectsApi.coverage(id) }),
+  integrity: (id: string) =>
+    queryOptions({ queryKey: keys.projectPart(id, 'integrity'), queryFn: () => projectsApi.integrity(id), staleTime: 0 }),
   comparisons: (id: string) =>
     queryOptions({ queryKey: keys.projectPart(id, 'comparisons'), queryFn: () => projectsApi.comparisons(id) }),
   pairs: (id: string) =>
@@ -65,7 +67,7 @@ export const q = {
   media: (filters: MediaFilters) =>
     queryOptions({
       queryKey: keys.mediaList(filters),
-      queryFn: (): Promise<Page<MediaAsset> & { queryUnderstanding?: { keywords: string[] } }> =>
+      queryFn: (): Promise<Page<MediaAsset> & { queryUnderstanding?: { keywords: string[]; mode?: 'semantic' | 'keyword' } }> =>
         filters.q?.trim() ? mediaApi.search(filters) : mediaApi.list(filters),
       placeholderData: keepPreviousData,
       refetchInterval: (query) => (hasInFlight(query.state.data?.items) ? POLL_MS : false),
