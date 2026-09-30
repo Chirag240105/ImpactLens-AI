@@ -353,8 +353,8 @@ Never commit `.env` or real credentials; add new settings to `.env.example` inst
 | Member | Focus |
 |---|---|
 | **Chirag** | Backend architecture, AI integration |
-| **Chiranjeet** | Frontend, UX and design system |
-| **Avnish** | Media intelligence, timeline, analysis jobs |
+| **Charanjeet** | Frontend, UX and design system |
+| **Avani Sharma** | Media intelligence, timeline, analysis jobs |
 | **Atharv** | Reports, testing, deployment and docs |
 
 ## Acknowledgements and license

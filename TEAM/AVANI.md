@@ -1,7 +1,7 @@
-# Avani — Media Intelligence + Data Visualization Engineer
+# Avani Sharma — Media Intelligence + Data Visualization Engineer
 
 Owns: `server/services/analysis`, `server/jobs`, media-processing logic, timeline/map/analytics
-data shaping (visual components built together with Chiranjeet).
+data shaping (visual components built together with Charanjeet).
 
 ## 1. Upload & metadata support
 - [ ] EXIF GPS extraction from uploaded images (feeds Chirag's `MediaAsset.location`)
@@ -16,7 +16,7 @@ data shaping (visual components built together with Chiranjeet).
 - [ ] Group project media by captureDate into a month-by-month timeline structure
       (see `docs/architecture.md` §Timeline Intelligence for the target shape)
 - [ ] API contract: `GET /api/projects/:id/timeline` → months with activities/asset counts
-- [ ] Handoff to Chiranjeet: agree on the exact JSON shape before she builds `/projects/:id/timeline`
+- [ ] Handoff to Charanjeet: agree on the exact JSON shape before she builds `/projects/:id/timeline`
 
 ## 4. Location intelligence
 - [ ] Location source resolution: GPS Verified > User Provided > AI Estimated > Unknown
@@ -45,4 +45,4 @@ data shaping (visual components built together with Chiranjeet).
 
 ## Coordination
 - [ ] Agree on MediaAsset and analysis schemas with Chirag before writing queries against them
-- [ ] Agree on timeline/map/coverage JSON shapes with Chiranjeet before she wires up the UI
+- [ ] Agree on timeline/map/coverage JSON shapes with Charanjeet before she wires up the UI

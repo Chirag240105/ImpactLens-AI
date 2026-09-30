@@ -38,7 +38,7 @@ Owns: `server/services/report`, deployment config, demo data/seed scripts, docs,
 - [ ] `docs/deployment.md` — how to deploy client + server
 - [ ] Final polished `docs/demo-script.md` walkthrough rehearsed end-to-end before presentation
 
-## 6. Final integration (with Chirag + Chiranjeet)
+## 6. Final integration (with Chirag + Charanjeet)
 - [ ] Confirm the full judge-facing flow works with zero developer intervention (see
       `docs/demo-script.md` §Success Criteria)
 - [ ] Freeze feature branches ahead of demo day, only bugfixes after that point
